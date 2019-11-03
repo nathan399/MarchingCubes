@@ -1,0 +1,158 @@
+
+#include "Terrain.h"
+
+Terrain::Terrain()
+{
+	for (int x = 0; x < 10; x++)
+	{
+		for (int y = 0; y < 10; y++)
+		{
+			for (int z = 0; z < 10; z++)
+			{
+
+				Cubes.push_back(MarchingCubes({ (float)x,(float)y, (float)z },
+												x == 9 ?true : false,
+												x == 0 ? true : false, 
+												y == 9 ? true : false,
+												y == 0 ? true : false,	
+												z == 9 ? true : false,
+												z == 0 ? true : false));
+			}
+		}
+	}
+}
+
+void Terrain::setUp(ID3D11DeviceContext* context) 
+{
+	mpContext = context;
+
+	ID3D11Device* device;
+	mpContext->GetDevice(&device);
+	
+	States = std::make_unique<DirectX::CommonStates>(device);
+
+	HRESULT hr = S_OK;
+	D3D11_BUFFER_DESC constantBufferDesc = {};
+	constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	constantBufferDesc.ByteWidth = sizeof(ConstantBuffer);
+	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+	hr = device->CreateBuffer(&constantBufferDesc, nullptr, &mpConstantBuffer);
+
+	ID3DBlob* VertexCode;
+
+	LoadVertexShader(device, L"simple_vs.hlsl", &mpVertexShader, &VertexCode);
+	LoadPixelShader(device, L"simple_ps.hlsl", &mpPixelShader);
+
+	D3D11_INPUT_ELEMENT_DESC VertexDesc[] =
+	{
+		// Data Type,  Type Index,  Data format                      Slot  Offset    Other values can be ignored for now 
+		{ "Position",  0,           DXGI_FORMAT_R32G32B32_FLOAT,     0,    0,        D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "Normal",  0,           DXGI_FORMAT_R32G32B32_FLOAT,     0,    12,        D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+	int VertexDescCount = sizeof(VertexDesc) / sizeof(VertexDesc[0]); // This gives a count of rows in the array above
+
+	device->CreateInputLayout(VertexDesc, VertexDescCount, VertexCode->GetBufferPointer(), VertexCode->GetBufferSize(), &mpVertexLayout);
+
+	SetBuffers();
+}
+
+void Terrain::generateTerrain(float pointDistance,float frequency, int GridSize, bool interpolate)
+{
+	/*generate vertices */
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		Cubes[i].generate(pointDistance, frequency, GridSize, interpolate);
+	}
+	SetBuffers();
+}
+
+void Terrain::AffectMesh(Vector3 pos, bool direction, float radius)
+{
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		if(Cubes[i].CubeToSphere(pos,radius))
+			Cubes[i].AffectPoints(pos, direction ? 1 : -1,radius);
+	}
+	SetBuffers();
+}
+
+void Terrain::SetBuffers()
+{
+	Vertices.clear();
+	if(mVertexBuffer)
+		mVertexBuffer->Release();
+
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		std::vector<SVertices> MarchingVertices = Cubes[i].getVertices();
+
+		for (auto vertex : MarchingVertices)
+		{
+			Vertices.push_back({ vertex.pos.x,vertex.pos.y,vertex.pos.z,vertex.normal.x,vertex.normal.y,vertex.normal.z });
+		}
+	}
+
+	HRESULT hr = S_OK;
+	// Fill in a buffer description.
+	D3D11_BUFFER_DESC bufferDesc;
+	bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	bufferDesc.ByteWidth = sizeof(CUSTOMVERTEX) * Vertices.size();
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.CPUAccessFlags = 0;
+	bufferDesc.MiscFlags = 0;
+
+	// Fill in the subresource data.
+	D3D11_SUBRESOURCE_DATA InitData;
+	InitData.pSysMem = &Vertices[0];
+	InitData.SysMemPitch = 0;
+	InitData.SysMemSlicePitch = 0;
+
+	// Create the vertex buffer.
+	ID3D11Device* device;
+	mpContext->GetDevice(&device);
+	hr = device->CreateBuffer(&bufferDesc, &InitData, &mVertexBuffer);
+}
+
+void Terrain::sendData(Matrix viewProj)
+{
+	D3D11_MAPPED_SUBRESOURCE data;
+
+	ConstantBuffer dater{ viewProj,world };
+
+	mpContext->Map(mpConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &data);
+	*static_cast<ConstantBuffer*>(data.pData) = dater;
+
+	mpContext->Unmap(mpConstantBuffer, 0);
+}
+
+void Terrain::render(Matrix viewProj, bool Wireframe)
+{
+	
+	mpContext->RSSetState( Wireframe ? States->Wireframe() : States->CullCounterClockwise());
+	//mpContext->RSSetState(States->CullNone());
+
+	UINT stride = sizeof(CUSTOMVERTEX);
+	UINT offset = 0;
+
+	mpContext->IASetVertexBuffers(0, 1, &mVertexBuffer, &stride, &offset);
+
+	
+	// 2a) Indicate the layout of the vertex buffer
+	mpContext->IASetInputLayout(mpVertexLayout);
+
+	// 2b) Also indicate the primitive topology of the buffer. Our buffer holds a triangle list - each set of 3 vertices
+	//     will be connected into a triangle. There are other topologies and we will see them shortly.
+	mpContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+
+	// 3) Select which shaders to use when rendering
+	mpContext->VSSetShader(mpVertexShader, nullptr, 0);
+	mpContext->PSSetShader(mpPixelShader, nullptr, 0);
+
+	sendData(viewProj);
+	mpContext->VSSetConstantBuffers(0,1,&mpConstantBuffer);
+	// 4) Draw 3 vertices, starting at vertex 0. This will draw a triangle using the vertex data and shaders selected
+	mpContext->Draw(Vertices.size(), 0);
+}

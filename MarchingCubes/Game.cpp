@@ -1,0 +1,348 @@
+//
+// Game.cpp
+//
+
+#include "pch.h"
+#include "Game.h"
+#include "imgui.h"
+#include "imgui_impl_dx11.h"
+#include "imgui_impl_win32.h"
+
+#include <iostream>
+
+extern void ExitGame();
+
+using namespace DirectX;
+
+using Microsoft::WRL::ComPtr;
+
+Game::Game() noexcept(false)
+{
+    m_deviceResources = std::make_unique<DX::DeviceResources>();
+    m_deviceResources->RegisterDeviceNotify(this);
+}
+
+Game::~Game()
+{
+	ImGui_ImplDX11_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
+}
+
+// Initialize the Direct3D resources required to run.
+void Game::Initialize(HWND window, int width, int height)
+{
+
+    m_deviceResources->SetWindow(window, width, height);
+
+    m_deviceResources->CreateDeviceResources();
+    CreateDeviceDependentResources();
+
+    m_deviceResources->CreateWindowSizeDependentResources();
+    CreateWindowSizeDependentResources();
+
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+
+	io.IniFilename = nullptr;
+	io.LogFilename = nullptr;
+
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplWin32_Init(window);
+	ImGui_ImplDX11_Init(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext());
+
+	/*initialise objects*/
+	terrain.setUp(m_deviceResources->GetD3DDeviceContext());
+
+	m_keyboard = std::make_unique<Keyboard>();
+	m_mouse = std::make_unique<Mouse>();
+	m_mouse->SetWindow(window);
+
+
+    // TODO: Change the timer settings if you want something other than the default variable timestep mode.
+    // e.g. for 60 FPS fixed timestep update logic, call:
+    /*
+    m_timer.SetFixedTimeStep(true);
+    m_timer.SetTargetElapsedSeconds(1.0 / 60);
+    */
+}
+
+#pragma region Frame Update
+// Executes the basic game loop.
+void Game::Tick()
+{
+    m_timer.Tick([&]()
+    {
+        Update(m_timer);
+    });
+
+    Render();
+}
+
+// Updates the world.
+void Game::Update(DX::StepTimer const& timer)
+{
+    float elapsedTime = float(timer.GetElapsedSeconds());
+
+    // TODO: Add your game logic here.
+	
+	auto kb = m_keyboard->GetState();
+	if (kb.Escape) ExitGame();
+
+	Vector3 move;
+	float pitch = 0,yaw = 0;
+
+	if (kb.W) move.z += 1.f;
+	if (kb.S) move.z -= 1.f;
+	if (kb.A) move.x += 1.f;
+	if (kb.D) move.x -= 1.f;
+	if (kb.Space) move.y += 1.f;
+	if (kb.LeftControl) move.y -= 1.f;
+
+	auto mouse = m_mouse->GetState();
+
+	if (mouse.positionMode == Mouse::MODE_RELATIVE)
+	{
+		Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f) * elapsedTime;
+
+		pitch -= delta.y;
+		yaw -= delta.x;
+	}
+	m_mouse->SetMode(mouse.rightButton ? Mouse::MODE_RELATIVE : Mouse::MODE_ABSOLUTE);
+
+	camera.Move(move, pitch, yaw);
+
+
+	//auto depthStencil2d = m_deviceResources->GetDepthStencil();
+	//auto depthtex = m_deviceResources->GetDepthTexture();
+
+	//auto context = m_deviceResources->GetD3DDeviceContext();
+
+	//context->CopyResource(depthtex, depthStencil2d);
+	//D3D11_MAPPED_SUBRESOURCE mapStructure;
+
+	//int width, height;
+	//GetDefaultSize(width, height);
+
+	//float** pixels = new float* [height];
+	//
+	//context->Map(depthtex, 0, D3D11_MAP_READ, 0, &mapStructure);
+	//char* depth = reinterpret_cast<char*> (mapStructure.pData);
+	//for (int i = 0; i < height; ++i)
+	//{
+	//	pixels[i] = new float[width];
+	//	memcpy(pixels[i], depth, width * sizeof(float));
+	//	depth += (mapStructure.RowPitch);
+	//}
+
+	//context->Unmap(depthtex, 0);
+	//
+	////depth to world pos
+	//float z = pixels[mouse.y][mouse.x] * 2.0 - 1.0;
+
+	//XMVECTOR clipSpacePosition = { mouse.x * 2.0 - 1.0, mouse.y * 2.0 - 1.0, z,1};
+	//XMVECTOR viewSpacePosition = XMVector4Transform(clipSpacePosition, camera.getInverseProj());
+	//
+	//// Perspective division
+	//viewSpacePosition /= viewSpacePosition.m128_f32[3];
+
+	//XMVECTOR worldSpacePosition = XMVector4Transform(viewSpacePosition, camera.getInverseView());
+
+	//Vector3 pos = worldSpacePosition;
+
+	//delete[] pixels;
+
+	if (mouse.leftButton)
+	{
+		terrain.AffectMesh(camera.GetPos() - (camera.getZAxis() * 30), extrude , extrudeRadius);
+	}
+
+	//if (!mouse.rightButton && mouse.y > 0 && mouse.x > 0)
+	//	std::cout << pos.x << " " <<  pos.y << " " << pos.z << "\n";
+
+    elapsedTime;
+}
+#pragma endregion
+
+#pragma region Frame Render
+// Draws the scene.
+void Game::Render()
+{
+    // Don't try to render anything before the first Update.
+    if (m_timer.GetFrameCount() == 0)
+    {
+        return;
+    }
+
+    Clear();
+
+
+    m_deviceResources->PIXBeginEvent(L"Render");
+    auto context = m_deviceResources->GetD3DDeviceContext();
+	m_deviceResources->GetD3DDevice();
+    // TODO: Add your rendering code here.
+   
+	camera.Render();
+
+	terrain.render(camera.getViewProj(),wireframe);
+
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::SetNextWindowPos(ImVec2(0,-10));
+	ImGui::SetNextWindowSize(ImVec2(260, 1080));
+
+	ImGui::Begin("Tools", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
+
+	ImGui::Text("");
+	//slider and text
+	ImGui::Text("Point Distance");
+	ImGui::SliderFloat("", &PointDistance, 0.1f, 10.f);
+
+	ImGui::Text("Frequency");
+	ImGui::SliderFloat(" ", &Frequency, 0.1f, 20.f);
+
+	ImGui::Text("GridSize");
+	ImGui::SliderInt("  ", &GridSize,5, 30);
+
+	ImGui::Text("Interpolate");
+	ImGui::Checkbox("   ", &interpolate);
+
+	if (ImGui::Button("Regenerate"))
+		terrain.generateTerrain(PointDistance, Frequency, GridSize, interpolate);
+
+	ImGui::Separator();
+
+	ImGui::Text("ExtrudeRadius");
+	ImGui::SliderFloat("      ", &extrudeRadius, 1.f, 40.f);
+
+	ImGui::Text("Extrude");
+	ImGui::Checkbox("     ", &extrude);
+
+	ImGui::Separator();
+
+	ImGui::Text("Wireframe");
+	ImGui::Checkbox("    ", &wireframe);
+
+	
+
+	
+
+	
+
+	ImGui::End();
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+    m_deviceResources->PIXEndEvent();
+
+    // Show the new frame.
+    m_deviceResources->Present();
+}
+
+// Helper method to clear the back buffers.
+void Game::Clear()
+{
+    m_deviceResources->PIXBeginEvent(L"Clear");
+
+    // Clear the views.
+    auto context = m_deviceResources->GetD3DDeviceContext();
+    auto renderTarget = m_deviceResources->GetRenderTargetView();
+    auto depthStencil = m_deviceResources->GetDepthStencilView();
+
+    context->ClearRenderTargetView(renderTarget, Colors::CornflowerBlue);
+    context->ClearDepthStencilView(depthStencil, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    context->OMSetRenderTargets(1, &renderTarget, depthStencil);
+
+    // Set the viewport.
+    auto viewport = m_deviceResources->GetScreenViewport();
+    context->RSSetViewports(1, &viewport);
+
+    m_deviceResources->PIXEndEvent();
+}
+#pragma endregion
+
+#pragma region Message Handlers
+// Message handlers
+void Game::OnActivated()
+{
+    // TODO: Game is becoming active window.
+}
+
+void Game::OnDeactivated()
+{
+    // TODO: Game is becoming background window.
+}
+
+void Game::OnSuspending()
+{
+    // TODO: Game is being power-suspended (or minimized).
+}
+
+void Game::OnResuming()
+{
+    m_timer.ResetElapsedTime();
+
+    // TODO: Game is being power-resumed (or returning from minimize).
+}
+
+void Game::OnWindowMoved()
+{
+    auto r = m_deviceResources->GetOutputSize();
+    m_deviceResources->WindowSizeChanged(r.right, r.bottom);
+}
+
+void Game::OnWindowSizeChanged(int width, int height)
+{
+    if (!m_deviceResources->WindowSizeChanged(width, height))
+        return;
+
+    CreateWindowSizeDependentResources();
+
+    // TODO: Game window is being resized.
+}
+
+// Properties
+void Game::GetDefaultSize(int& width, int& height) const
+{
+    // TODO: Change to desired default window size (note minimum size is 320x200).
+    width = 800;
+    height = 600;
+}
+#pragma endregion
+
+#pragma region Direct3D Resources
+// These are the resources that depend on the device.
+void Game::CreateDeviceDependentResources()
+{
+    auto device = m_deviceResources->GetD3DDevice();
+
+    // TODO: Initialize device dependent objects here (independent of window size).
+    device;
+}
+
+// Allocate all memory resources that change on a window SizeChanged event.
+void Game::CreateWindowSizeDependentResources()
+{
+    // TODO: Initialize windows-size dependent objects here.
+	int width, height;
+	GetDefaultSize(width, height);
+
+	camera = Camera({ 0,0,-5 }, (float)width, (float)height);
+}
+
+void Game::OnDeviceLost()
+{
+    // TODO: Add Direct3D resource cleanup here.
+}
+
+void Game::OnDeviceRestored()
+{
+    CreateDeviceDependentResources();
+
+    CreateWindowSizeDependentResources();
+}
+#pragma endregion
