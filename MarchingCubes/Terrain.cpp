@@ -24,6 +24,33 @@ void Terrain::setUp(ID3D11DeviceContext* context)
 
 	hr = device->CreateBuffer(&constantBufferDesc, nullptr, &mpConstantBuffer);
 
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Rock.jpg", &mpDiffuseMap, &mpDiffuseMapSRV)))
+	{
+		std::string t = "wtf";
+	}
+
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Dirt.jpg", &mpDiffuseMap2, &mpDiffuseMapSRV2)))
+	{
+		std::string t = "wtf";
+	}
+
+	D3D11_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT; // Filtering method - see lecture
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;   // Addressing mode for texture coordinates outside 0->1 - see lecture
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;   // --"--
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;   // --"--
+
+	samplerDesc.MaxAnisotropy = 1;                        // Number of samples used for anisotropic filtering, more is better, but max value depends on GPU
+
+	samplerDesc.MaxLOD = 0; // Controls how much mip-mapping can be used
+	samplerDesc.MinLOD = 0; // --"--
+
+	// Then create a DirectX object for your description that can be used by a shader
+	if (FAILED(device->CreateSamplerState(&samplerDesc, &mpTextureSampler)))
+	{
+		std::string t = "wtf";
+	}
+
 	//ID3DBlob* VertexCode;
 
 	//LoadVertexShader(device, L"simple_vs.hlsl", &mpVertexShader, &VertexCode);
@@ -136,6 +163,10 @@ void Terrain::render(Matrix viewProj, bool Wireframe)
 
 	sendData(viewProj);
 	mpContext->VSSetConstantBuffers(0, 1, &mpConstantBuffer);
+	mpContext->PSSetShaderResources(0, 1, &mpDiffuseMapSRV);
+	mpContext->PSSetShaderResources(1, 1, &mpDiffuseMapSRV2);
+	mpContext->PSSetSamplers(0, 1, &mpTextureSampler);
+
 	for (int i = 0; i < Cubes.size(); i++)
 	{
 		Cubes[i].Render(Wireframe ? States->Wireframe() : States->CullCounterClockwise());

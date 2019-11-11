@@ -16,6 +16,9 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{0df1ba68-4687-4bb5-8d2a-2cebb6447c00}</UniqueIdentifier>
     </Filter>
+    <Filter Include="DirectXTK">
+      <UniqueIdentifier>{2497dc68-1bb9-43b1-9afd-38e25957bf3e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DeviceResources.h">
@@ -50,6 +53,9 @@
     </ClInclude>
     <ClInclude Include="MarchingCubes.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DirectXTK\WICTextureLoader.h">
+      <Filter>DirectXTK</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

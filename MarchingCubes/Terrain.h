@@ -3,6 +3,7 @@
 #include "Shader.h"
 #include "FastNoise.h"
 #include "MarchingCubes.h"
+#include "WICTextureLoader.h"
 #include <memory>
 #include <SimpleMath.h>
 #include <vector>
@@ -38,6 +39,13 @@ private:
 
 	ID3D11VertexShader* mpVertexShader = NULL;
 	ID3D11PixelShader* mpPixelShader = NULL;
+
+	ID3D11Resource* mpDiffuseMap = nullptr; // This object represents the memory used by the texture on the GPU
+	ID3D11ShaderResourceView* mpDiffuseMapSRV = nullptr; // This object is used to give shaders access to the texture above (SRV = shader resource view)
+	ID3D11Resource* mpDiffuseMap2 = nullptr; // This object represents the memory used by the texture on the GPU
+	ID3D11ShaderResourceView* mpDiffuseMapSRV2 = nullptr; // This object is used to give shaders access to the texture above (SRV = shader resource view)
+
+	ID3D11SamplerState* mpTextureSampler = nullptr;
 
 	ID3D11DeviceContext* mpContext = NULL;
 

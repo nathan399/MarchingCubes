@@ -58,8 +58,7 @@ void Game::Initialize(HWND window, int width, int height)
 	m_keyboard = std::make_unique<Keyboard>();
 	m_mouse = std::make_unique<Mouse>();
 	m_mouse->SetWindow(window);
-
-
+	
     // TODO: Change the timer settings if you want something other than the default variable timestep mode.
     // e.g. for 60 FPS fixed timestep update logic, call:
     /*
@@ -177,7 +176,7 @@ void Game::Render()
 
     Clear();
 
-
+	
     m_deviceResources->PIXBeginEvent(L"Render");
     auto context = m_deviceResources->GetD3DDeviceContext();
 	m_deviceResources->GetD3DDevice();
