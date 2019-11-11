@@ -10,11 +10,11 @@
 
 using DirectX::SimpleMath::Matrix;
 
-struct CUSTOMVERTEX
-{
-	float x, y, z; //position
-	float nx, ny, nz; // normal
-};
+//struct CUSTOMVERTEX
+//{
+//	float x, y, z; //position
+//	float nx, ny, nz; // normal
+//};
 
 class Terrain
 {

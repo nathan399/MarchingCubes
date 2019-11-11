@@ -259,8 +259,9 @@ int triTable[256][16] =
 {0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1} };
 
-MarchingCubes::MarchingCubes(Vector3 pos, bool xmax, bool xmin, bool ymax, bool ymin, bool zmax, bool zmin, float pointDistance, float frequency, int GridSize, bool interpolate) : Pos(pos)
+MarchingCubes::MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, bool xmax, bool xmin, bool ymax, bool ymin, bool zmax, bool zmin, float pointDistance, float frequency, int GridSize, bool interpolate) : Pos(pos)
 {
+	mpContext = context;
 	xMax = xmax;
 	xMin = xmin;
 	yMax = ymax;
@@ -269,7 +270,40 @@ MarchingCubes::MarchingCubes(Vector3 pos, bool xmax, bool xmin, bool ymax, bool 
 	zMin = zmin;
 	gridSize = GridSize;
 	Interpolate = interpolate;
+
+	mpContext = context;
+
+	ID3D11Device* device;
+	mpContext->GetDevice(&device);
+
+	//States = std::make_unique<DirectX::CommonStates>(device);
+
+	HRESULT hr = S_OK;
+	D3D11_BUFFER_DESC constantBufferDesc = {};
+	constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	constantBufferDesc.ByteWidth = sizeof(ConstantBuffer);
+	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+	hr = device->CreateBuffer(&constantBufferDesc, nullptr, &mpConstantBuffer);
+
+	ID3DBlob* VertexCode;
+
+	LoadVertexShader(device, L"simple_vs.hlsl", &mpVertexShader, &VertexCode);
+	LoadPixelShader(device, L"simple_ps.hlsl", &mpPixelShader);
+
+	D3D11_INPUT_ELEMENT_DESC VertexDesc[] =
+	{
+		// Data Type,  Type Index,  Data format                      Slot  Offset    Other values can be ignored for now 
+		{ "Position",  0,           DXGI_FORMAT_R32G32B32_FLOAT,     0,    0,        D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "Normal",  0,           DXGI_FORMAT_R32G32B32_FLOAT,     0,    12,        D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+	int VertexDescCount = sizeof(VertexDesc) / sizeof(VertexDesc[0]); // This gives a count of rows in the array above
+
+	device->CreateInputLayout(VertexDesc, VertexDescCount, VertexCode->GetBufferPointer(), VertexCode->GetBufferSize(), &mpVertexLayout);
+
 	generate(pointDistance, frequency, GridSize, interpolate);
+
 }
 
 void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, bool interpolate)
@@ -337,6 +371,8 @@ void MarchingCubes::CreateMesh()
 			}
 		}
 	}
+	if(vertices.size() >0)
+		SetBuffer();
 }
 
 void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius)
@@ -406,6 +442,64 @@ bool MarchingCubes::CubeToSphere(Vector3 sPos, float radius)
 
 	return dmin <= pow(radius, 2);
 	
+}
+
+void MarchingCubes::SetBuffer()
+{
+	if (mVertexBuffer)
+		mVertexBuffer->Release();
+
+	
+
+	HRESULT hr = S_OK;
+	// Fill in a buffer description.
+	D3D11_BUFFER_DESC bufferDesc;
+	bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	bufferDesc.ByteWidth = sizeof(CUSTOMVERTEX) * vertices.size();
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.CPUAccessFlags = 0;
+	bufferDesc.MiscFlags = 0;
+
+	// Fill in the subresource data.
+	D3D11_SUBRESOURCE_DATA InitData;
+	InitData.pSysMem = &vertices[0];
+	InitData.SysMemPitch = 0;
+	InitData.SysMemSlicePitch = 0;
+
+	// Create the vertex buffer.
+	ID3D11Device* device;
+	mpContext->GetDevice(&device);
+	hr = device->CreateBuffer(&bufferDesc, &InitData, &mVertexBuffer);
+
+}
+
+void MarchingCubes::Render(ID3D11RasterizerState* state)
+{
+	if (vertices.size() > 0)
+	{
+		mpContext->RSSetState(state);
+
+		UINT stride = sizeof(CUSTOMVERTEX);
+		UINT offset = 0;
+
+		mpContext->IASetVertexBuffers(0, 1, &mVertexBuffer, &stride, &offset);
+
+
+		// 2a) Indicate the layout of the vertex buffer
+		mpContext->IASetInputLayout(mpVertexLayout);
+
+		// 2b) Also indicate the primitive topology of the buffer. Our buffer holds a triangle list - each set of 3 vertices
+		//     will be connected into a triangle. There are other topologies and we will see them shortly.
+		mpContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+
+		// 3) Select which shaders to use when rendering
+		mpContext->VSSetShader(mpVertexShader, nullptr, 0);
+		mpContext->PSSetShader(mpPixelShader, nullptr, 0);
+
+		// 4) Draw 3 vertices, starting at vertex 0. This will draw a triangle using the vertex data and shaders selected
+		mpContext->Draw(vertices.size(), 0);
+	}
 }
 
 
