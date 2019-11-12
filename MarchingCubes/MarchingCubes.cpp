@@ -350,7 +350,7 @@ void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, b
 						float noise3 = Noise.GetSimplex((x + convertedPos.x) * frequency * 2.5, 0, (z + convertedPos.z) * frequency * 2.5) * 0.25;
 						float noise4 = Noise.GetSimplex((x + convertedPos.x) * frequency * 5.5, 0, (z + convertedPos.z) * frequency * 5.5) * 0.125;
 						noise = noise1 + noise2 + noise3 + noise4;
-						noise = (noise + 1) * 20 - (y + convertedPos.y);
+						noise = (noise + 2) * 20 - (y + convertedPos.y);
 					}
 					else
 						noise = Noise.GetSimplex((x + convertedPos.x) * frequency, (y + convertedPos.y) * frequency, (z + convertedPos.z) * frequency);

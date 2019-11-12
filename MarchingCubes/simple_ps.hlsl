@@ -21,12 +21,8 @@ float4 main(in PS_INPUT pIn) : SV_Target
 	float2 uv = float2(0,0); 
 	
 	float2 uv2 = float2(0, 0); 
-
-	if (abs(pIn.Normal.x) > 0.5)
-		uv2.x = pIn.WorldPos.y / 20;
-
-	else if (abs(pIn.Normal.z) > 0.5)
-		uv2.y = pIn.WorldPos.y / 20;
+	uv2.x = pIn.WorldPos.y / 80;
+	uv2.y = pIn.WorldPos.y / 80;
 
 	
 	uv = float2(pIn.WorldPos.x / 20 + uv.x, pIn.WorldPos.z / 20 + uv.y);	
@@ -35,11 +31,13 @@ float4 main(in PS_INPUT pIn) : SV_Target
 	float3 diffuseMapColour1 = DiffuseMap1.Sample(TexSampler, uv2).rgb;;
 	float3 diffuseMapColour2 = DiffuseMap2.Sample(TexSampler, uv).rgb;;
 
-	float lerpV = 1;
+	float lerpV = 0;
 	
-	lerpV -= abs(pIn.Normal.y);
+	lerpV = pIn.Normal.y * 2 - 1;
 
-	float3  diffuseMapColour = diffuseMapColour1 * lerpV + diffuseMapColour2 * (1 - lerpV);
+	lerpV = clamp(lerpV, 0, 1);
+
+	float3  diffuseMapColour = diffuseMapColour1 * (1 - lerpV) + diffuseMapColour2 * lerpV;
 
 	return //pIn.Pos.z / pIn.Pos.w;  
 	float4(diffuseMapColour + DiffuseLight1 + AmbientColour,1);    // Yellow, with Alpha = 1
