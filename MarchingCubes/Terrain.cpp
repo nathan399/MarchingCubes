@@ -29,7 +29,7 @@ void Terrain::setUp(ID3D11DeviceContext* context)
 		std::string t = "wtf";
 	}
 
-	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Dirt.jpg", &mpDiffuseMap2, &mpDiffuseMapSRV2)))
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Grass.jpg", &mpDiffuseMap2, &mpDiffuseMapSRV2)))
 	{
 		std::string t = "wtf";
 	}
