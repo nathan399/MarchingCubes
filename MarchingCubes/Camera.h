@@ -31,5 +31,7 @@ private:
 	float Pitch = 0;
 	float Yaw = 0;
 	Vector3 Position;
+	float MoveSpeed = 50;
+	float RotSpeed = 2;
 };
 

@@ -14,8 +14,9 @@ Camera::~Camera()
 
 void Camera::Move(Vector3 movement, float pitch, float yaw)
 {
-	Pitch += pitch;
-	Yaw += yaw;
+	Pitch += pitch * RotSpeed;
+	Yaw += yaw * RotSpeed;
+	movement *= MoveSpeed;
 
 	Quaternion q = Quaternion::CreateFromYawPitchRoll(Yaw, -Pitch, 0.f);
 	movement = Vector3::Transform(movement, q);

@@ -59,6 +59,8 @@ void Game::Initialize(HWND window, int width, int height)
 	m_mouse = std::make_unique<Mouse>();
 	m_mouse->SetWindow(window);
 	
+	
+
     // TODO: Change the timer settings if you want something other than the default variable timestep mode.
     // e.g. for 60 FPS fixed timestep update logic, call:
     /*
@@ -103,16 +105,16 @@ void Game::Update(DX::StepTimer const& timer)
 
 	if (mouse.positionMode == Mouse::MODE_RELATIVE)
 	{
-		Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f) * elapsedTime;
+		Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f) * m_timer.GetElapsedSeconds();
 
 		pitch -= delta.y;
 		yaw -= delta.x;
 	}
 	m_mouse->SetMode(mouse.rightButton ? Mouse::MODE_RELATIVE : Mouse::MODE_ABSOLUTE);
 
-	camera.Move(move, pitch, yaw);
+	camera.Move(move * m_timer.GetElapsedSeconds(), pitch, yaw);
 
-
+	
 	//auto depthStencil2d = m_deviceResources->GetDepthStencil();
 	//auto depthtex = m_deviceResources->GetDepthTexture();
 
@@ -196,7 +198,11 @@ void Game::Render()
 	ImGui::Begin("Tools", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
 
-	ImGui::Text("");
+	std::string fps = std::to_string(m_timer.GetFramesPerSecond());
+	fps = "Fps: " + fps;
+
+	ImGui::Text( &fps[0]);
+	
 	//slider and text
 	ImGui::Text("Point Distance");
 	ImGui::SliderFloat("", &PointDistance, 0.1f, 10.f);
@@ -225,11 +231,6 @@ void Game::Render()
 
 	ImGui::Text("Wireframe");
 	ImGui::Checkbox("    ", &wireframe);
-
-	
-
-	
-
 	
 
 	ImGui::End();
