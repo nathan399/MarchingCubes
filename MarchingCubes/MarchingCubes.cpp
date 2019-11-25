@@ -446,8 +446,8 @@ void MarchingCubes::Smooth(Vector3 pos, int direction, float radius, Neighbours 
 				}
 				else
 				{
-					float average = Points[x][y][z].value;
-					int totals = 7;
+					float average =0;
+					int totals = 6;
 					float length = (Points[x][y][z].pos - pos).Length();
 					
 					if (length < radius)
@@ -456,52 +456,40 @@ void MarchingCubes::Smooth(Vector3 pos, int direction, float radius, Neighbours 
 						if (x < gridSize - 1)
 							average += Points[x + 1][y][z].value;
 						else
-						{
-							average += neighbours.Left->Points[0][y][z].value;
-							neighbours.Left->Points[0][y][z].value = Points[x][y][z].value;
-						}
+							average += neighbours.Left->Points[1][y][z].value;
 							
 
 						if (x > 0)
 							average += Points[x - 1][y][z].value;
 						else
-						{
-							average += neighbours.Right->Points[gridSize - 1][y][z].value;
-							neighbours.Right->Points[gridSize - 1][y][z].value = Points[x][y][z].value;
-						}
+							average += neighbours.Right->Points[gridSize - 2][y][z].value;
 
 						////up down connectors
 						if (y < gridSize - 1)
 							average += Points[x][y + 1][z].value;
 						else
-							average += neighbours.Up->Points[x][0][z].value;
+							average += neighbours.Up->Points[x][1][z].value;
 							
 
 						if (y > 0)
 							average += Points[x][y - 1][z].value;
 						else
-							average += neighbours.Down->Points[x][gridSize - 1][z].value;
+							average += neighbours.Down->Points[x][gridSize - 2][z].value;
 
 						//forward back connectors
 						if (z < gridSize - 1)
 							average += Points[x][y][z + 1].value;
 						else
-						{
-							average += neighbours.Back->Points[x][y][0].value;
-							neighbours.Back->Points[x][y][0].value = Points[x][y][z].value;
-						}
+							average += neighbours.Back->Points[x][y][1].value;
 
 						if (z > 0)
 							average += Points[x][y][z - 1].value;
 						else
-						{
-							average += neighbours.Forward->Points[x][y][gridSize - 1].value;
-							neighbours.Forward->Points[x][y][gridSize - 1].value = Points[x][y][z].value;
-						}
+							average += neighbours.Forward->Points[x][y][gridSize - 2].value;
 							
 
 						average /= totals;
-						if (abs(Points[x][y][z].value - average) > 0.1)
+						if (abs(Points[x][y][z].value - average) > 0.05)
 						{
 							if (Points[x][y][z].value < average)
 								Points[x][y][z].value += 0.04;
