@@ -69,11 +69,11 @@ void Terrain::setUp(ID3D11DeviceContext* context)
 	//SetBuffers();
 
 	//create cubes
-	for (int x = 0; x < 10; x++)
+	for (int x = 0; x < ChunkSize; x++)
 	{
-		for (int y = 0; y < 10; y++)
+		for (int y = 0; y < ChunkSize; y++)
 		{
-			for (int z = 0; z < 10; z++)
+			for (int z = 0; z < ChunkSize; z++)
 			{
 
 				Cubes.push_back(MarchingCubes(context,{ (float)x,(float)y, (float)z },
@@ -103,8 +103,18 @@ void Terrain::AffectMesh(Vector3 pos, bool direction, float radius)
 {
 	for (int i = 0; i < Cubes.size(); i++)
 	{
+		Neighbours n;
+		n.Left = i <= Cubes.size() - ChunkSize * ChunkSize ? &Cubes[i + ChunkSize * ChunkSize] : nullptr;
+		n.Right = i >= ChunkSize * ChunkSize ? &Cubes[i - ChunkSize * ChunkSize] : nullptr;
+
+		n.Up = i <= Cubes.size() - ChunkSize ? &Cubes[i + ChunkSize] : nullptr;
+		n.Down = i >= ChunkSize ? &Cubes[i - ChunkSize] : nullptr;
+
+		n.Forward = i > 0 ? & Cubes[i-1] : nullptr;
+		n.Back = i < Cubes.size()-1 ? & Cubes[i + 1] : nullptr;
+
 		if(Cubes[i].CubeToSphere(pos,radius))
-			Cubes[i].AffectPoints(pos, direction ? 1 : -1,radius);
+			Cubes[i].Smooth(pos, direction ? 1 : -1,radius, n);
 	}
 	//SetBuffers();
 }

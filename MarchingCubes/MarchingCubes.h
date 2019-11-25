@@ -11,6 +11,8 @@ using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
 using std::vector;
 
+class MarchingCubes;
+
 struct CUSTOMVERTEX
 {
 	float x, y, z; //position
@@ -29,6 +31,16 @@ struct PointData
 	float value;
 };
 
+struct Neighbours
+{
+	MarchingCubes* Left;
+	MarchingCubes* Right;
+	MarchingCubes* Up;
+	MarchingCubes* Down;
+	MarchingCubes* Forward;
+	MarchingCubes* Back;
+};
+
 class MarchingCubes
 {
 public:
@@ -38,9 +50,12 @@ public:
 	void generate(float pointDistance, float frequency, int GridSize, bool interpolate);
 	void CreateMesh();
 	void AffectPoints(Vector3 pos, int direction, float radius);
+	void Smooth(Vector3 pos, int direction, float radius, Neighbours neighbours);
 	bool CubeToSphere(Vector3 sPos, float radius);
 	void SetBuffer();
 	void Render(ID3D11RasterizerState* state);
+	float GetValueAt(float x, float y, float z) {return Points[x][y][z].value;}
+	
 private:
 	ID3D11InputLayout* mpVertexLayout = NULL;
 	ID3D11Buffer* mVertexBuffer = NULL;

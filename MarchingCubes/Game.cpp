@@ -105,14 +105,14 @@ void Game::Update(DX::StepTimer const& timer)
 
 	if (mouse.positionMode == Mouse::MODE_RELATIVE)
 	{
-		Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f) * m_timer.GetElapsedSeconds();
+		Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f) * 0.001;
 
 		pitch -= delta.y;
 		yaw -= delta.x;
 	}
 	m_mouse->SetMode(mouse.rightButton ? Mouse::MODE_RELATIVE : Mouse::MODE_ABSOLUTE);
 
-	camera.Move(move * m_timer.GetElapsedSeconds(), pitch, yaw);
+	camera.Move(move * elapsedTime, pitch, yaw);
 
 	
 	//auto depthStencil2d = m_deviceResources->GetDepthStencil();

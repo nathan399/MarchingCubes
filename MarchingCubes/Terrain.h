@@ -33,6 +33,7 @@ public:
 	
 
 private:
+	int ChunkSize = 10;
 	ID3D11InputLayout* mpVertexLayout = NULL;
 	ID3D11Buffer* mVertexBuffer = NULL;
 	ID3D11Buffer* mpConstantBuffer = NULL;

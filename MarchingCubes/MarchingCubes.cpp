@@ -428,6 +428,96 @@ void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius)
 	CreateMesh();
 }
 
+void MarchingCubes::Smooth(Vector3 pos, int direction, float radius, Neighbours neighbours)
+{
+	for (int x = 0; x < Points.size(); x++)
+	{
+		for (int y = 0; y < Points[x].size(); y++)
+		{
+			for (int z = 0; z < Points[x][y].size(); z++)
+			{
+				if ((y >= gridSize - 1 && yMax)
+					|| (x == 0 && xMin)
+					|| (x >= gridSize - 1 && xMax)
+					|| (z == 0 && zMin)
+					|| (z >= gridSize - 1 && zMax))
+				{
+					Points[x][y][z].value = -1;
+				}
+				else
+				{
+					float average = Points[x][y][z].value;
+					int totals = 7;
+					float length = (Points[x][y][z].pos - pos).Length();
+					
+					if (length < radius)
+					{
+						//left right connectors
+						if (x < gridSize - 1)
+							average += Points[x + 1][y][z].value;
+						else
+						{
+							average += neighbours.Left->Points[0][y][z].value;
+							neighbours.Left->Points[0][y][z].value = Points[x][y][z].value;
+						}
+							
+
+						if (x > 0)
+							average += Points[x - 1][y][z].value;
+						else
+						{
+							average += neighbours.Right->Points[gridSize - 1][y][z].value;
+							neighbours.Right->Points[gridSize - 1][y][z].value = Points[x][y][z].value;
+						}
+
+						////up down connectors
+						if (y < gridSize - 1)
+							average += Points[x][y + 1][z].value;
+						else
+							average += neighbours.Up->Points[x][0][z].value;
+							
+
+						if (y > 0)
+							average += Points[x][y - 1][z].value;
+						else
+							average += neighbours.Down->Points[x][gridSize - 1][z].value;
+
+						//forward back connectors
+						if (z < gridSize - 1)
+							average += Points[x][y][z + 1].value;
+						else
+						{
+							average += neighbours.Back->Points[x][y][0].value;
+							neighbours.Back->Points[x][y][0].value = Points[x][y][z].value;
+						}
+
+						if (z > 0)
+							average += Points[x][y][z - 1].value;
+						else
+						{
+							average += neighbours.Forward->Points[x][y][gridSize - 1].value;
+							neighbours.Forward->Points[x][y][gridSize - 1].value = Points[x][y][z].value;
+						}
+							
+
+						average /= totals;
+						if (abs(Points[x][y][z].value - average) > 0.1)
+						{
+							if (Points[x][y][z].value < average)
+								Points[x][y][z].value += 0.04;
+							else
+								Points[x][y][z].value -= 0.04;
+						}
+						
+
+					}
+				}
+			}
+		}
+	}
+	CreateMesh();
+}
+
 bool MarchingCubes::CubeToSphere(Vector3 sPos, float radius)
 {
 	float dmin = 0;
