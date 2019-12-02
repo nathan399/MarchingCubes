@@ -16,7 +16,7 @@ using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
 
-Game::Game() noexcept(false)
+Game::Game() noexcept(false) : terrain({5,5,2})
 {
     m_deviceResources = std::make_unique<DX::DeviceResources>();
     m_deviceResources->RegisterDeviceNotify(this);
@@ -154,9 +154,27 @@ void Game::Update(DX::StepTimer const& timer)
 
 	//delete[] pixels;
 
-	if (mouse.leftButton)
+	if (mouse.leftButton && (mouse.x > 260 || mouse.positionMode == Mouse::MODE_RELATIVE))
 	{
-		terrain.AffectMesh(camera.GetPos() - (camera.getZAxis() * 30), extrude , extrudeRadius);
+		switch (AffectType)
+		{
+		case 0: 
+		{
+			terrain.AffectMesh(camera.GetPos() - (camera.getZAxis() * 30), true, extrudeRadius);
+			break;
+		}
+		case 1:
+		{
+			terrain.AffectMesh(camera.GetPos() - (camera.getZAxis() * 30), false, extrudeRadius);
+			break;
+		}
+		case 2:
+		{
+			terrain.Smooth(camera.GetPos() - (camera.getZAxis() * 30), extrudeRadius);
+			break;
+		}
+		}
+		
 	}
 
 	//if (!mouse.rightButton && mouse.y > 0 && mouse.x > 0)
@@ -204,28 +222,53 @@ void Game::Render()
 	ImGui::Text( &fps[0]);
 	
 	//slider and text
+	bool changed = false;
+
 	ImGui::Text("Point Distance");
-	ImGui::SliderFloat("", &PointDistance, 0.1f, 10.f);
+	changed |= ImGui::SliderFloat("", &PointDistance, 0.1f, 10.f);
 
 	ImGui::Text("Frequency");
-	ImGui::SliderFloat(" ", &Frequency, 0.1f, 20.f);
+	changed |= ImGui::SliderFloat(" ", &Frequency, 0.1f, 20.f);
+
+	ImGui::Text("Surface Level");
+	changed |= ImGui::SliderFloat("   ", &surfaceLevel, 5.f, 30.f);
 
 	ImGui::Text("GridSize");
-	ImGui::SliderInt("  ", &GridSize,5, 30);
+	changed |= ImGui::SliderInt("  ", &GridSize, 5, 30);
 
 	ImGui::Text("Interpolate");
-	ImGui::Checkbox("   ", &interpolate);
+	changed |= ImGui::Checkbox("   ", &interpolate);
+		
+	if(changed)
+		terrain.generateTerrain(PointDistance, Frequency, GridSize, interpolate, surfaceLevel);
 
-	if (ImGui::Button("Regenerate"))
-		terrain.generateTerrain(PointDistance, Frequency, GridSize, interpolate);
+	/*if (ImGui::Button("Regenerate"))
+		terrain.generateTerrain(PointDistance, Frequency, GridSize, interpolate);*/
 
 	ImGui::Separator();
 
+	static const char* items[] = { "Add", "Remove", "Smooth"};
+	static const char* current_item = items[0];
+
+	if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
+	{
+		for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+		{
+			bool is_selected = current_item == items[n]; // You can store your selection however you want, outside or inside your objects
+			if (ImGui::Selectable(items[n], is_selected))
+			{
+				AffectType = n;
+				current_item = items[n];
+			}
+			if (is_selected)
+					ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+		}
+		ImGui::EndCombo();
+	}
+	//delete[] items;
+
 	ImGui::Text("ExtrudeRadius");
 	ImGui::SliderFloat("      ", &extrudeRadius, 1.f, 40.f);
-
-	ImGui::Text("Extrude");
-	ImGui::Checkbox("     ", &extrude);
 
 	ImGui::Separator();
 

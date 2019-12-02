@@ -11,21 +11,23 @@
 
 using DirectX::SimpleMath::Matrix;
 
-//struct CUSTOMVERTEX
-//{
-//	float x, y, z; //position
-//	float nx, ny, nz; // normal
-//};
+struct ChunkSize
+{
+	int x;
+	int y;
+	int z;
+};
 
 class Terrain
 {
 public:
-	Terrain();
+	Terrain(ChunkSize size);
 	~Terrain() {};
 
 	void setUp(ID3D11DeviceContext* context);
-	void generateTerrain(float pointDistance,float frequency,int GridSize,bool interpolate);
+	void generateTerrain(float pointDistance,float frequency,int GridSize,bool interpolate, float surfaceLevel);
 	void AffectMesh(Vector3 pos,bool direction, float radius);
+	void Smooth(Vector3 pos, float radius);
 	void SetBuffers();
 	void sendData(Matrix viewProj);
 	void render(Matrix viewProj, bool Wireframe);
@@ -33,7 +35,8 @@ public:
 	
 
 private:
-	int ChunkSize = 10;
+	int Chunks = 10;
+	ChunkSize Chunk;
 	ID3D11InputLayout* mpVertexLayout = NULL;
 	ID3D11Buffer* mVertexBuffer = NULL;
 	ID3D11Buffer* mpConstantBuffer = NULL;
@@ -57,6 +60,8 @@ private:
 	std::vector<CUSTOMVERTEX> Vertices;
 
 	std::unique_ptr<DirectX::CommonStates> States;
+
+	
 
 	struct ConstantBuffer
 	{

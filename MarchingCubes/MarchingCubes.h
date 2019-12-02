@@ -41,16 +41,26 @@ struct Neighbours
 	MarchingCubes* Back;
 };
 
+struct sEdges
+{
+	bool xMax = false;
+	bool xMin = false;
+	bool yMax =	false;
+	bool yMin = false;
+	bool zMax =	false;
+	bool zMin =	false;
+};			  
+
 class MarchingCubes
 {
 public:
-	MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, bool xmax, bool xmin, bool ymax, bool ymin, bool zmax, bool zmin, float pointDistance = 1, float frequency = 1, int GridSize = 10, bool interpolate = true);
+	MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, sEdges edges, float pointDistance = 1, float frequency = 1, int GridSize = 10, bool interpolate = true);
 	~MarchingCubes() {};
 	std::vector<SVertices> getVertices() { return vertices; }
-	void generate(float pointDistance, float frequency, int GridSize, bool interpolate);
+	void generate(float pointDistance, float frequency, int GridSize, bool interpolate, float surfaceLevel);
 	void CreateMesh();
 	void AffectPoints(Vector3 pos, int direction, float radius);
-	void Smooth(Vector3 pos, int direction, float radius, Neighbours neighbours);
+	void Smooth(Vector3 pos, float radius, Neighbours neighbours);
 	bool CubeToSphere(Vector3 sPos, float radius);
 	void SetBuffer();
 	void Render(ID3D11RasterizerState* state);
@@ -88,7 +98,7 @@ private:
 	Vector3 Pos;
 	Vector3 center;
 
-	bool xMax, xMin, yMax, yMin, zMax, zMin;
+	sEdges EdgeState;
 
 	void CalculateCubesVerticies(PointData edge[8]);
 	Vector3 CalculateMid(const PointData& p1, const PointData& p2);

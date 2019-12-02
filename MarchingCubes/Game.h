@@ -11,6 +11,8 @@
 #include "Mouse.h"
 #include "Keyboard.h"
 
+enum class AffectTypes { Add, Remove, Smooth };
+
 // A basic game implementation that creates a D3D11 device and
 // provides a game loop.
 class Game final : public DX::IDeviceNotify
@@ -63,8 +65,10 @@ private:
 	std::unique_ptr<DirectX::Mouse> m_mouse;
 
 	//UI Variables 
+	int AffectType = 0;
 	float PointDistance = 1.f;
 	float Frequency = 1.f;
+	float surfaceLevel = 20.f;
 	int GridSize = 10;
 	bool interpolate = true;
 	bool wireframe = false;

@@ -1,9 +1,9 @@
 
 #include "Terrain.h"
 
-Terrain::Terrain()
+Terrain::Terrain(ChunkSize size)
 {
-	
+	Chunk = size;
 }
 
 void Terrain::setUp(ID3D11DeviceContext* context) 
@@ -26,12 +26,12 @@ void Terrain::setUp(ID3D11DeviceContext* context)
 
 	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Rock.jpg", &mpDiffuseMap, &mpDiffuseMapSRV)))
 	{
-		std::string t = "wtf";
+		std::string t = "Texture failed";
 	}
 
 	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Grass.jpg", &mpDiffuseMap2, &mpDiffuseMapSRV2)))
 	{
-		std::string t = "wtf";
+		std::string t = "Texture failed";
 	}
 
 	D3D11_SAMPLER_DESC samplerDesc = {};
@@ -69,32 +69,35 @@ void Terrain::setUp(ID3D11DeviceContext* context)
 	//SetBuffers();
 
 	//create cubes
-	for (int x = 0; x < ChunkSize; x++)
+	for (int x = 0; x < Chunk.x; x++)
 	{
-		for (int y = 0; y < ChunkSize; y++)
+		for (int y = 0; y < Chunk.y; y++)
 		{
-			for (int z = 0; z < ChunkSize; z++)
+			for (int z = 0; z < Chunk.z; z++)
 			{
-
-				Cubes.push_back(MarchingCubes(context,{ (float)x,(float)y, (float)z },
-					x == 9 ? true : false,
+				sEdges edge
+				{
+					x == Chunk.x - 1 ? true : false,
 					x == 0 ? true : false,
-					y == 9 ? true : false,
+					y == Chunk.y - 1 ? true : false,
 					y == 0 ? true : false,
-					z == 9 ? true : false,
-					z == 0 ? true : false));
+					z == Chunk.z - 1 ? true : false,
+					z == 0 ? true : false
+				};
+
+				Cubes.push_back(MarchingCubes(context,{ (float)x,(float)y, (float)z }, edge));
 			}
 		}
 	}
 
 }
 
-void Terrain::generateTerrain(float pointDistance,float frequency, int GridSize, bool interpolate)
+void Terrain::generateTerrain(float pointDistance,float frequency, int GridSize, bool interpolate, float surfaceLevel)
 {
 	/*generate vertices */
 	for (int i = 0; i < Cubes.size(); i++)
 	{
-		Cubes[i].generate(pointDistance, frequency, GridSize, interpolate);
+		Cubes[i].generate(pointDistance, frequency, GridSize, interpolate,surfaceLevel);
 	}
 	//SetBuffers();
 }
@@ -103,20 +106,29 @@ void Terrain::AffectMesh(Vector3 pos, bool direction, float radius)
 {
 	for (int i = 0; i < Cubes.size(); i++)
 	{
-		Neighbours n;
-		n.Left = i <= Cubes.size() - ChunkSize * ChunkSize ? &Cubes[i + ChunkSize * ChunkSize] : nullptr;
-		n.Right = i >= ChunkSize * ChunkSize ? &Cubes[i - ChunkSize * ChunkSize] : nullptr;
-
-		n.Up = i <= Cubes.size() - ChunkSize ? &Cubes[i + ChunkSize] : nullptr;
-		n.Down = i >= ChunkSize ? &Cubes[i - ChunkSize] : nullptr;
-
-		n.Forward = i > 0 ? & Cubes[i-1] : nullptr;
-		n.Back = i < Cubes.size()-1 ? & Cubes[i + 1] : nullptr;
-
 		if(Cubes[i].CubeToSphere(pos,radius))
-			Cubes[i].Smooth(pos, direction ? 1 : -1,radius, n);
+			Cubes[i].AffectPoints(pos, direction ? 1 : -1,radius);
 	}
 	//SetBuffers();
+}
+
+void Terrain::Smooth(Vector3 pos, float radius)
+{
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		Neighbours n;	
+		n.Left = i <= Cubes.size() - Chunk.y * Chunk.z ? &Cubes[i + Chunk.y * Chunk.z] : nullptr;
+		n.Right = i >= Chunk.y * Chunk.z ? &Cubes[i - Chunk.y * Chunk.z] : nullptr;
+
+		n.Up = i <= Cubes.size() - Chunk.z ? &Cubes[i + Chunk.z] : nullptr;
+		n.Down = i >= Chunk.z ? &Cubes[i - Chunk.z] : nullptr;
+
+		n.Forward = i > 0 ? &Cubes[i - 1] : nullptr;
+		n.Back = i < Cubes.size() - 1 ? &Cubes[i + 1] : nullptr;
+
+		if (Cubes[i].CubeToSphere(pos, radius))
+			Cubes[i].Smooth(pos, radius, n);
+	}
 }
 
 void Terrain::SetBuffers()

@@ -259,15 +259,11 @@ int triTable[256][16] =
 {0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1} };
 
-MarchingCubes::MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, bool xmax, bool xmin, bool ymax, bool ymin, bool zmax, bool zmin, float pointDistance, float frequency, int GridSize, bool interpolate) : Pos(pos)
+MarchingCubes::MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, sEdges edges, float pointDistance, float frequency, int GridSize, bool interpolate) : Pos(pos)
 {
 	mpContext = context;
-	xMax = xmax;
-	xMin = xmin;
-	yMax = ymax;
-	yMin = ymin;
-	zMax = zmax;
-	zMin = zmin;
+	
+	EdgeState = edges;
 	gridSize = GridSize;
 	Interpolate = interpolate;
 
@@ -302,11 +298,11 @@ MarchingCubes::MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, bool xmax
 
 	device->CreateInputLayout(VertexDesc, VertexDescCount, VertexCode->GetBufferPointer(), VertexCode->GetBufferSize(), &mpVertexLayout);
 
-	generate(pointDistance, frequency, GridSize, interpolate);
+	generate(pointDistance, frequency, GridSize, interpolate,20);
 
 }
 
-void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, bool interpolate)
+void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, bool interpolate, float surfaceLevel)
 {
 	gridSize = GridSize;
 	Interpolate = interpolate;
@@ -329,33 +325,34 @@ void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, b
 			for (int z = 0; z < GridSize; z++)
 			{
 				Points[x][y][z].pos = { (float)(x + (convertedPos.x)) * pointDistance,(float)(y + (convertedPos.y )) * pointDistance,(float)(z + (convertedPos.z)) * pointDistance};
-				if ((y >= GridSize - 1 && yMax)
-					|| (x == 0 && xMin)
-					|| (x >= GridSize - 1 && xMax)
-					|| (z == 0 && zMin)
-					|| (z >= GridSize - 1 && zMax))
+				if ((y >= GridSize - 1 && EdgeState.yMax)
+					|| (x == 0 && EdgeState.xMin)
+					|| (x >= GridSize - 1 && EdgeState.xMax)
+					|| (z == 0 && EdgeState.zMin)
+					|| (z >= GridSize - 1 && EdgeState.zMax))
 				{
 					Points[x][y][z].value = -1;
 				}
-				else if (y == 0 && yMin)
+				else if (y == 0 && EdgeState.yMin)
 					Points[x][y][z].value = 1;
 				else
 				{
-					bool test = true;
+					bool surface = true; //y + convertedPos.y > 20;
 					float noise;
-					if (test)
+
+					float noise1 = Noise.GetPerlin((x + convertedPos.x) * frequency, (y + convertedPos.y) * frequency, (z + convertedPos.z) * frequency);
+					float noise2 = Noise.GetPerlin((x + convertedPos.x) * frequency * 1.05, (y + convertedPos.y) * frequency, (z + convertedPos.z) * frequency * 1.05) * 0.5;
+					float noise3 = Noise.GetPerlin((x + convertedPos.x) * frequency * 2.5, (y + convertedPos.y) * frequency, (z + convertedPos.z) * frequency * 2.5) * 0.25;
+					float noise4 = Noise.GetPerlin((x + convertedPos.x) * frequency * 5.5, (y + convertedPos.y) * frequency, (z + convertedPos.z) * frequency * 5.5) * 0.125;
+					noise = noise1 + noise2 + noise3 + noise4;
+
+					if (surface)
 					{
-						float noise1 = Noise.GetPerlin((x + convertedPos.x) * frequency, (y + convertedPos.y) * frequency, (z + convertedPos.z) * frequency);
-						float noise2 = Noise.GetPerlin((x + convertedPos.x) * frequency * 1.05, (y + convertedPos.y) * frequency, (z + convertedPos.z) * frequency * 1.05) * 0.5;
-						float noise3 = Noise.GetPerlin((x + convertedPos.x) * frequency * 2.5, (y + convertedPos.y) * frequency, (z + convertedPos.z) * frequency * 2.5) * 0.25;
-						float noise4 = Noise.GetPerlin((x + convertedPos.x) * frequency * 5.5, (y + convertedPos.y) * frequency, (z + convertedPos.z) * frequency * 5.5) * 0.125;
-						noise = noise1 + noise2 + noise3 + noise4;
-						noise = (noise + 2) * 20 - (y + convertedPos.y);
+						
+						noise = (noise + 2)  - (y + convertedPos.y) / surfaceLevel;
 					}
-					else
-						noise = Noise.GetPerlin((x + convertedPos.x) * frequency, (y + convertedPos.y) * frequency, (z + convertedPos.z) * frequency);
 
-
+					/*noise /= 20;*/
 
 					Points[x][y][z].value = noise;
 				}
@@ -400,11 +397,11 @@ void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius)
 		{
 			for (int z = 0; z < Points[x][y].size(); z++)
 			{
-				if ((y >= gridSize - 1 && yMax)
-					|| (x == 0 && xMin)
-					|| (x >= gridSize - 1 && xMax)
-					|| (z == 0 && zMin)
-					|| (z >= gridSize - 1 && zMax))
+				if ((y >= gridSize - 1 && EdgeState.yMax)
+					|| (x == 0 && EdgeState.xMin)
+					|| (x >= gridSize - 1 && EdgeState.xMax)
+					|| (z == 0 && EdgeState.zMin)
+					|| (z >= gridSize - 1 && EdgeState.zMax))
 				{
 					Points[x][y][z].value = -1;
 				}
@@ -428,7 +425,7 @@ void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius)
 	CreateMesh();
 }
 
-void MarchingCubes::Smooth(Vector3 pos, int direction, float radius, Neighbours neighbours)
+void MarchingCubes::Smooth(Vector3 pos, float radius, Neighbours neighbours)
 {
 	for (int x = 0; x < Points.size(); x++)
 	{
@@ -436,11 +433,11 @@ void MarchingCubes::Smooth(Vector3 pos, int direction, float radius, Neighbours 
 		{
 			for (int z = 0; z < Points[x][y].size(); z++)
 			{
-				if ((y >= gridSize - 1 && yMax)
-					|| (x == 0 && xMin)
-					|| (x >= gridSize - 1 && xMax)
-					|| (z == 0 && zMin)
-					|| (z >= gridSize - 1 && zMax))
+				if ((y >= gridSize - 1 && EdgeState.yMax)
+					|| (x == 0 && EdgeState.xMin)
+					|| (x >= gridSize - 1 && EdgeState.xMax)
+					|| (z == 0 && EdgeState.zMin)
+					|| (z >= gridSize - 1 && EdgeState.zMax))
 				{
 					Points[x][y][z].value = -1;
 				}
@@ -473,8 +470,10 @@ void MarchingCubes::Smooth(Vector3 pos, int direction, float radius, Neighbours 
 
 						if (y > 0)
 							average += Points[x][y - 1][z].value;
-						else
+						else if (!EdgeState.yMin)
 							average += neighbours.Down->Points[x][gridSize - 2][z].value;
+						else
+							totals--;
 
 						//forward back connectors
 						if (z < gridSize - 1)
@@ -489,7 +488,7 @@ void MarchingCubes::Smooth(Vector3 pos, int direction, float radius, Neighbours 
 							
 
 						average /= totals;
-						if (abs(Points[x][y][z].value - average) > 0.05)
+						if (abs(Points[x][y][z].value - average) > 0.02)
 						{
 							if (Points[x][y][z].value < average)
 								Points[x][y][z].value += 0.04;
