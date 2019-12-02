@@ -173,6 +173,11 @@ void Game::Update(DX::StepTimer const& timer)
 			terrain.Smooth(camera.GetPos() - (camera.getZAxis() * 30), extrudeRadius);
 			break;
 		}
+		case 3:
+		{
+			terrain.Flatten(camera.GetPos() - (camera.getZAxis() * 30), extrudeRadius);
+			break;
+		}
 		}
 		
 	}
@@ -247,7 +252,7 @@ void Game::Render()
 
 	ImGui::Separator();
 
-	static const char* items[] = { "Add", "Remove", "Smooth"};
+	static const char* items[] = { "Add", "Remove", "Smooth", "Flatten"};
 	static const char* current_item = items[0];
 
 	if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.

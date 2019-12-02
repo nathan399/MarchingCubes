@@ -505,6 +505,49 @@ void MarchingCubes::Smooth(Vector3 pos, float radius, Neighbours neighbours)
 	CreateMesh();
 }
 
+void MarchingCubes::Flatten(Vector3 pos, float radius)
+{
+	for (int x = 0; x < Points.size(); x++)
+	{
+		for (int y = 0; y < Points[x].size(); y++)
+		{
+			for (int z = 0; z < Points[x][y].size(); z++)
+			{
+				if ((y >= gridSize - 1 && EdgeState.yMax)
+					|| (x == 0 && EdgeState.xMin)
+					|| (x >= gridSize - 1 && EdgeState.xMax)
+					|| (z == 0 && EdgeState.zMin)
+					|| (z >= gridSize - 1 && EdgeState.zMax))
+				{
+					Points[x][y][z].value = -1;
+				}
+				else
+				{
+					float length = (Points[x][y][z].pos - pos).Length();
+					if (length < radius)
+					{
+						if (Points[x][y][z].pos.y < pos.y)
+						{
+							Points[x][y][z].value += (0.04) / length;
+
+							if (Points[x][y][z].value > MaxValue)
+								Points[x][y][z].value = MaxValue;
+						}
+						else
+						{
+							Points[x][y][z].value -= (0.04) / length;
+
+							if (Points[x][y][z].value < MinValue)
+								Points[x][y][z].value = MinValue;
+						}
+					}
+				}
+			}
+		}
+	}
+	CreateMesh();
+}
+
 bool MarchingCubes::CubeToSphere(Vector3 sPos, float radius)
 {
 	float dmin = 0;
@@ -534,7 +577,7 @@ bool MarchingCubes::CubeToSphere(Vector3 sPos, float radius)
 		dmin += pow(center.z - bmax.z, 2);
 	}
 
-	return dmin <= pow(radius, 2);
+	return dmin <= pow(radius + 10.f, 2);
 	
 }
 

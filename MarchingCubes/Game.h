@@ -11,7 +11,7 @@
 #include "Mouse.h"
 #include "Keyboard.h"
 
-enum class AffectTypes { Add, Remove, Smooth };
+enum class AffectTypes { Add, Remove, Smooth, Flatten };
 
 // A basic game implementation that creates a D3D11 device and
 // provides a game loop.

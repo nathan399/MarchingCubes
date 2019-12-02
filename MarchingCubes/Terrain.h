@@ -28,6 +28,7 @@ public:
 	void generateTerrain(float pointDistance,float frequency,int GridSize,bool interpolate, float surfaceLevel);
 	void AffectMesh(Vector3 pos,bool direction, float radius);
 	void Smooth(Vector3 pos, float radius);
+	void Flatten(Vector3 pos, float radius);
 	void SetBuffers();
 	void sendData(Matrix viewProj);
 	void render(Matrix viewProj, bool Wireframe);

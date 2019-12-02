@@ -61,6 +61,7 @@ public:
 	void CreateMesh();
 	void AffectPoints(Vector3 pos, int direction, float radius);
 	void Smooth(Vector3 pos, float radius, Neighbours neighbours);
+	void Flatten(Vector3 pos, float radius);
 	bool CubeToSphere(Vector3 sPos, float radius);
 	void SetBuffer();
 	void Render(ID3D11RasterizerState* state);

@@ -131,6 +131,16 @@ void Terrain::Smooth(Vector3 pos, float radius)
 	}
 }
 
+void Terrain::Flatten(Vector3 pos, float radius)
+{
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		if (Cubes[i].CubeToSphere(pos, radius))
+			Cubes[i].Flatten(pos, radius);
+	}
+	//SetBuffers();
+}
+
 void Terrain::SetBuffers()
 {
 	Vertices.clear();
