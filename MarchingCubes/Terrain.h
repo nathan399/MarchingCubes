@@ -32,6 +32,8 @@ public:
 	void SetBuffers();
 	void sendData(Matrix viewProj);
 	void render(Matrix viewProj, bool Wireframe);
+
+	bool RayCast(Vector3& Pos, Vector3 Direction, float RayRadius, int RayCastLoops);
 	
 	
 

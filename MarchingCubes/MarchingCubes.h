@@ -63,6 +63,7 @@ public:
 	void Smooth(Vector3 pos, float radius, Neighbours neighbours);
 	void Flatten(Vector3 pos, float radius);
 	bool CubeToSphere(Vector3 sPos, float radius);
+	bool GetSurfacePoint(Vector3& pos, float Radius);
 	void SetBuffer();
 	void Render(ID3D11RasterizerState* state);
 	float GetValueAt(float x, float y, float z) {return Points[x][y][z].value;}

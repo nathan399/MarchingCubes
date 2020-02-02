@@ -156,28 +156,35 @@ void Game::Update(DX::StepTimer const& timer)
 
 	if (mouse.leftButton && (mouse.x > 260 || mouse.positionMode == Mouse::MODE_RELATIVE))
 	{
-		switch (AffectType)
+		Vector3 pos = camera.GetPos();
+		Vector3 PointAheadPos = camera.GetPos() - (camera.getZAxis() * 30);
+
+
+		if(terrain.RayCast(pos, -camera.getZAxis(), 5, 100))
 		{
-		case 0: 
-		{
-			terrain.AffectMesh(camera.GetPos() - (camera.getZAxis() * 30), true, extrudeRadius);
-			break;
-		}
-		case 1:
-		{
-			terrain.AffectMesh(camera.GetPos() - (camera.getZAxis() * 30), false, extrudeRadius);
-			break;
-		}
-		case 2:
-		{
-			terrain.Smooth(camera.GetPos() - (camera.getZAxis() * 30), extrudeRadius);
-			break;
-		}
-		case 3:
-		{
-			terrain.Flatten(camera.GetPos() - (camera.getZAxis() * 30), extrudeRadius);
-			break;
-		}
+			switch (AffectType)
+			{
+			case 0: 
+			{
+				terrain.AffectMesh(pos, true, extrudeRadius);
+				break;
+			}
+			case 1:
+			{
+				terrain.AffectMesh(pos, false, extrudeRadius);
+				break;
+			}
+			case 2:
+			{
+				terrain.Smooth(pos, extrudeRadius);
+				break;
+			}
+			case 3:
+			{
+				terrain.Flatten(pos, extrudeRadius);
+				break;
+			}
+			}
 		}
 		
 	}

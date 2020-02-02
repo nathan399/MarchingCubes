@@ -581,6 +581,29 @@ bool MarchingCubes::CubeToSphere(Vector3 sPos, float radius)
 	
 }
 
+bool MarchingCubes::GetSurfacePoint(Vector3& pos, float Radius)
+{
+	for (int x = 0; x < Points.size(); x++)
+	{
+		for (int y = 0; y < Points[x].size(); y++)
+		{
+			for (int z = 0; z < Points[x][y].size(); z++)
+			{
+				float length = (Points[x][y][z].pos - pos).Length();
+				if (length < Radius)
+				{
+					if (Points[x][y][z].value > SurfaceLevel)
+					{
+						pos = Points[x][y][z].pos;
+						return true;
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
+
 void MarchingCubes::SetBuffer()
 {
 	if (mVertexBuffer)
