@@ -73,7 +73,7 @@ private:
 	bool interpolate = true;
 	bool wireframe = false;
 	bool extrude = true;
-	float extrudeRadius = 10.f;
+	float ToolRadius = 10.f;
 
 	// Game Objects
 	Terrain terrain;

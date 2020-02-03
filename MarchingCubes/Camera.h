@@ -6,6 +6,8 @@
 
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
+using DirectX::SimpleMath::Vector4;
+
 
 
 class Camera
@@ -23,7 +25,7 @@ public:
 	Matrix getInverseProj();
 	Vector3 getZAxis();
 	Vector3 GetPos() { return Position; }
-
+	Vector3 WorldPointFromPixel(float x, float y, int width, int height);
 
 private:
 	Matrix ViewMatrix;
@@ -33,5 +35,7 @@ private:
 	Vector3 Position;
 	float MoveSpeed = 50;
 	float RotSpeed = 2;
+	float NearClip = 0.01f;
+	float FarClip = 1000.f;
 };
 

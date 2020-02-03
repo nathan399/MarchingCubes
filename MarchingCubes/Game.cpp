@@ -159,29 +159,34 @@ void Game::Update(DX::StepTimer const& timer)
 		Vector3 pos = camera.GetPos();
 		Vector3 PointAheadPos = camera.GetPos() - (camera.getZAxis() * 30);
 
+		auto r = m_deviceResources->GetOutputSize();
+		auto mousePos = camera.WorldPointFromPixel(mouse.x, mouse.y, r.right, r.bottom);
 
-		if(terrain.RayCast(pos, -camera.getZAxis(), 5, 100))
+		Vector3 ray = (mousePos - pos);
+		ray.Normalize();
+
+		if(terrain.RayCast(pos, ray, 1, 100))
 		{
 			switch (AffectType)
 			{
 			case 0: 
 			{
-				terrain.AffectMesh(pos, true, extrudeRadius);
+				terrain.AffectMesh(pos, true, ToolRadius);
 				break;
 			}
 			case 1:
 			{
-				terrain.AffectMesh(pos, false, extrudeRadius);
+				terrain.AffectMesh(pos, false, ToolRadius);
 				break;
 			}
 			case 2:
 			{
-				terrain.Smooth(pos, extrudeRadius);
+				terrain.Smooth(pos, ToolRadius);
 				break;
 			}
 			case 3:
 			{
-				terrain.Flatten(pos, extrudeRadius);
+				terrain.Flatten(pos, ToolRadius);
 				break;
 			}
 			}
@@ -279,8 +284,8 @@ void Game::Render()
 	}
 	//delete[] items;
 
-	ImGui::Text("ExtrudeRadius");
-	ImGui::SliderFloat("      ", &extrudeRadius, 1.f, 40.f);
+	ImGui::Text("ToolRadius");
+	ImGui::SliderFloat("      ", &ToolRadius, 1.f, 40.f);
 
 	ImGui::Separator();
 

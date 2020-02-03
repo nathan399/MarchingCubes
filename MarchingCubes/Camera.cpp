@@ -5,7 +5,7 @@ using DirectX::SimpleMath::Quaternion;
 
 Camera::Camera(Vector3 position, float width, float height) : Position(position)
 {
-	ProjMatrix = Matrix::CreatePerspectiveFieldOfView(DirectX::XMConvertToRadians(70.f), width / height, 0.01f, 1000.f);
+	ProjMatrix = Matrix::CreatePerspectiveFieldOfView(DirectX::XMConvertToRadians(70.f), width / height, NearClip, FarClip);
 }
 
 Camera::~Camera()
@@ -71,4 +71,11 @@ Matrix Camera::getInverseProj()
 Vector3 Camera::getZAxis()
 {
 	return Vector3(ViewMatrix._13, ViewMatrix._23, ViewMatrix._33);
+}
+
+Vector3 Camera::WorldPointFromPixel(float x, float y, int width, int height)
+{
+	Vector3 screen = {x,y,0};
+	return DirectX::XMVector3Unproject(screen, 0, 0, width, height, NearClip, FarClip, ProjMatrix, ViewMatrix, Matrix::Identity);
+
 }
