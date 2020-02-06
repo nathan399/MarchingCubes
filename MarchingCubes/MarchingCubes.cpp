@@ -364,6 +364,7 @@ void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, b
 
 void MarchingCubes::CreateMesh()
 {
+	CalculateCubeNormals();
 	vertices.clear();
 	for (int x = 0; x < Points.size() - 1; x++)
 	{
@@ -526,7 +527,7 @@ void MarchingCubes::Flatten(Vector3 pos, float radius)
 					float length = (Points[x][y][z].pos - pos).Length();
 					if (length < radius)
 					{
-						if (Points[x][y][z].pos.y < pos.y)
+						if (Points[x][y][z].pos.y <= pos.y)
 						{
 							Points[x][y][z].value += (0.04) / length;
 
@@ -677,7 +678,7 @@ void MarchingCubes::CalculateCubesVerticies(PointData edge[8])
 	if (edge[6].value > SurfaceLevel) ActivePointsbyte |= 64;
 	if (edge[7].value > SurfaceLevel) ActivePointsbyte |= 128;
 
-	std::vector<Vector3> triangle;
+	std::vector<SVertices> triangle;
 
 	for (int x = 0; x < 16; x++)
 	{
@@ -725,21 +726,70 @@ void MarchingCubes::CalculateCubesVerticies(PointData edge[8])
 		}
 		if (x % 3 == 2)
 		{
-			Vector3 v1 = triangle[1] - triangle[0];
-			Vector3 v2 = triangle[2] - triangle[0];
+			Vector3 v1 = triangle[1].pos - triangle[0].pos;
+			Vector3 v2 = triangle[2].pos - triangle[0].pos;
 
 			Vector3 normal = Normalise(Cross(v2,v1));
 			normal.x *= -1; //flip x because its the only one the wrong way
 			for (auto vert : triangle)
 			{
-				vertices.push_back({ vert,normal });
+				vertices.push_back({ vert.pos,vert.normal });
 			}
 			triangle.clear();
 		}
 	}
 }
 
-Vector3 MarchingCubes::CalculateMid(const PointData& p1, const PointData& p2)
+void MarchingCubes::CalculateCubeNormals()
+{
+	for (int x = 0; x < Points.size(); x++)
+	{
+		for (int y = 0; y < Points[x].size(); y++)
+		{
+			for (int z = 0; z < Points[x][y].size(); z++)
+			{
+				if ((y >= gridSize - 1 && EdgeState.yMax)
+					|| (x == 0 && EdgeState.xMin)
+					|| (x >= gridSize - 1 && EdgeState.xMax)
+					|| (z == 0 && EdgeState.zMin)
+					|| (z >= gridSize - 1 && EdgeState.zMax)
+					|| (y == 0 && EdgeState.yMin))
+				{
+					Points[x][y][z].normal = { 0,0,0 };
+				}
+				else
+				{
+					
+
+					//left right connectors
+					if (x < gridSize - 2 && x > 0)
+						Points[x][y][z].normal.x = Points[x - 1][y][z].value - Points[x + 1][y][z].value;
+					/*else
+						average += neighbours.Left->Points[1][y][z].value;*/
+
+
+					////up down connectors
+					if (y < gridSize - 2 && y > 0)
+						Points[x][y][z].normal.y = Points[x][y - 1][z].value - Points[x][y + 1 ][z].value;
+					/*else
+						average += neighbours.Up->Points[x][1][z].value;*/
+
+
+
+					//forward back connectors
+					if (z < gridSize - 2 && z > 0)
+						Points[x][y][z].normal.z = Points[x][y][z -1].value - Points[x][y][z +1].value;
+					/*else
+						average += neighbours.Back->Points[x][y][1].value;*/
+					Points[x][y][z].normal.Normalize();
+
+				}
+			}
+		}
+	}
+}
+
+SVertices MarchingCubes::CalculateMid(const PointData& p1, const PointData& p2)
 {
 	if (Interpolate)
 	{
@@ -752,17 +802,21 @@ Vector3 MarchingCubes::CalculateMid(const PointData& p1, const PointData& p2)
 		else
 		*/
 		{
-			Vector3 point;
+			SVertices point;
 			float multiplier = (SurfaceLevel - p1.value) / (p2.value - p1.value);
-			point.x = p1.pos.x + multiplier * (p2.pos.x - p1.pos.x);
-			point.y = p1.pos.y + multiplier * (p2.pos.y - p1.pos.y);
-			point.z = p1.pos.z + multiplier * (p2.pos.z - p1.pos.z);
+			point.pos.x = p1.pos.x + multiplier * (p2.pos.x - p1.pos.x);
+			point.pos.y = p1.pos.y + multiplier * (p2.pos.y - p1.pos.y);
+			point.pos.z = p1.pos.z + multiplier * (p2.pos.z - p1.pos.z);
+
+			point.normal.x = p1.normal.x + multiplier * (p2.normal.x - p1.normal.x);
+			point.normal.y = p1.normal.y + multiplier * (p2.normal.y - p1.normal.y);
+			point.normal.z = p1.normal.z + multiplier * (p2.normal.z - p1.normal.z);
 			return point;
 		}
 	}	
 	else
 	{
-		return (p1.pos + p2.pos) / 2;
+		return { (p1.pos + p2.pos) / 2, };
 	}
 
 

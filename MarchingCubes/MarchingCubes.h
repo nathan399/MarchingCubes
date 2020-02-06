@@ -28,6 +28,7 @@ struct SVertices
 struct PointData
 {
 	Vector3 pos;
+	Vector3 normal;
 	float value;
 };
 
@@ -103,7 +104,8 @@ private:
 	sEdges EdgeState;
 
 	void CalculateCubesVerticies(PointData edge[8]);
-	Vector3 CalculateMid(const PointData& p1, const PointData& p2);
+	void CalculateCubeNormals();
+	SVertices CalculateMid(const PointData& p1, const PointData& p2);
 	Vector3 Cross(const Vector3& v1, const Vector3& v2);
 	Vector3 Normalise(const Vector3& v);
 	
