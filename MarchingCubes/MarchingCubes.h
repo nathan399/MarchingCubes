@@ -61,7 +61,7 @@ public:
 	void generate(float pointDistance, float frequency, int GridSize, bool interpolate, float surfaceLevel);
 	void CreateMesh();
 	void AffectPoints(Vector3 pos, int direction, float radius);
-	void Smooth(Vector3 pos, float radius, Neighbours neighbours);
+	void Smooth(Vector3 pos, float radius);
 	void Flatten(Vector3 pos, float radius);
 	bool CubeToSphere(Vector3 sPos, float radius);
 	bool GetSurfacePoint(Vector3& pos, float Radius);
@@ -69,6 +69,8 @@ public:
 	void Render(ID3D11RasterizerState* state);
 	float GetValueAt(float x, float y, float z) {return Points[x][y][z].value;}
 	
+
+	Neighbours neighbours;
 private:
 	ID3D11InputLayout* mpVertexLayout = NULL;
 	ID3D11Buffer* mVertexBuffer = NULL;

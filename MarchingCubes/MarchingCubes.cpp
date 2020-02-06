@@ -359,7 +359,7 @@ void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, b
 			}
 		}
 	}
-	CreateMesh();
+	
 }
 
 void MarchingCubes::CreateMesh()
@@ -426,7 +426,7 @@ void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius)
 	CreateMesh();
 }
 
-void MarchingCubes::Smooth(Vector3 pos, float radius, Neighbours neighbours)
+void MarchingCubes::Smooth(Vector3 pos, float radius)
 {
 	for (int x = 0; x < Points.size(); x++)
 	{
@@ -762,25 +762,54 @@ void MarchingCubes::CalculateCubeNormals()
 					
 
 					//left right connectors
-					if (x < gridSize - 2 && x > 0)
+					if (x >= gridSize - 1)
+					{
+						Points[x][y][z].normal.x = Points[x - 1][y][z].value - neighbours.Left->Points[1][y][z].value;
+					}
+					else if(x <= 0)
+					{
+						Points[x][y][z].normal.x = neighbours.Right->Points[gridSize - 2][y][z].value - Points[x + 1][y][z].value;
+					}
+					else
+					{
 						Points[x][y][z].normal.x = Points[x - 1][y][z].value - Points[x + 1][y][z].value;
-					/*else
-						average += neighbours.Left->Points[1][y][z].value;*/
+					}
+						
 
 
 					////up down connectors
-					if (y < gridSize - 2 && y > 0)
-						Points[x][y][z].normal.y = Points[x][y - 1][z].value - Points[x][y + 1 ][z].value;
-					/*else
-						average += neighbours.Up->Points[x][1][z].value;*/
+
+					if (y >= gridSize - 1)
+					{
+						Points[x][y][z].normal.y = Points[x][y -1][z].value - neighbours.Up->Points[x][1][z].value;
+					}
+					else if (y <= 0)
+					{
+						Points[x][y][z].normal.y = neighbours.Down->Points[x][gridSize - 2][z].value - Points[x][y + 1][z].value;
+					}
+					else
+					{
+						Points[x][y][z].normal.y = Points[x][y - 1][z].value - Points[x][y + 1][z].value;
+					}
+
 
 
 
 					//forward back connectors
-					if (z < gridSize - 2 && z > 0)
-						Points[x][y][z].normal.z = Points[x][y][z -1].value - Points[x][y][z +1].value;
-					/*else
-						average += neighbours.Back->Points[x][y][1].value;*/
+					if (z >= gridSize - 1)
+					{
+						Points[x][y][z].normal.z = Points[x ][y][z -1].value - neighbours.Back->Points[x][y][1].value;
+					}
+					else if (z <= 0)
+					{
+						Points[x][y][z].normal.z = neighbours.Forward->Points[x][y][gridSize - 2].value - Points[x][y][z + 1].value;
+					}
+					else
+					{
+						Points[x][y][z].normal.z = Points[x][y][z - 1].value - Points[x][y][z + 1].value;
+					}
+
+
 					Points[x][y][z].normal.Normalize();
 
 				}

@@ -90,6 +90,15 @@ void Terrain::setUp(ID3D11DeviceContext* context)
 		}
 	}
 
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		Cubes[i].neighbours = GetNeightbours(i);
+	}
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		Cubes[i].CreateMesh();
+	}
+
 }
 
 void Terrain::generateTerrain(float pointDistance,float frequency, int GridSize, bool interpolate, float surfaceLevel)
@@ -99,7 +108,10 @@ void Terrain::generateTerrain(float pointDistance,float frequency, int GridSize,
 	{
 		Cubes[i].generate(pointDistance, frequency, GridSize, interpolate,surfaceLevel);
 	}
-	//SetBuffers();
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		Cubes[i].CreateMesh();
+	}
 }
 
 void Terrain::AffectMesh(Vector3 pos, bool direction, float radius)
@@ -109,25 +121,14 @@ void Terrain::AffectMesh(Vector3 pos, bool direction, float radius)
 		if(Cubes[i].CubeToSphere(pos,radius))
 			Cubes[i].AffectPoints(pos, direction ? 1 : -1,radius);
 	}
-	//SetBuffers();
 }
 
 void Terrain::Smooth(Vector3 pos, float radius)
 {
 	for (int i = 0; i < Cubes.size(); i++)
 	{
-		Neighbours n;	
-		n.Left = i <= Cubes.size() - Chunk.y * Chunk.z ? &Cubes[i + Chunk.y * Chunk.z] : nullptr;
-		n.Right = i >= Chunk.y * Chunk.z ? &Cubes[i - Chunk.y * Chunk.z] : nullptr;
-
-		n.Up = i <= Cubes.size() - Chunk.z ? &Cubes[i + Chunk.z] : nullptr;
-		n.Down = i >= Chunk.z ? &Cubes[i - Chunk.z] : nullptr;
-
-		n.Forward = i > 0 ? &Cubes[i - 1] : nullptr;
-		n.Back = i < Cubes.size() - 1 ? &Cubes[i + 1] : nullptr;
-
 		if (Cubes[i].CubeToSphere(pos, radius))
-			Cubes[i].Smooth(pos, radius, n);
+			Cubes[i].Smooth(pos, radius);
 	}
 }
 
@@ -138,7 +139,6 @@ void Terrain::Flatten(Vector3 pos, float radius)
 		if (Cubes[i].CubeToSphere(pos, radius))
 			Cubes[i].Flatten(pos, radius);
 	}
-	//SetBuffers();
 }
 
 void Terrain::SetBuffers()
@@ -223,4 +223,19 @@ bool Terrain::RayCast(Vector3& Pos, Vector3 Direction, float RayRadius, int RayC
 		}
 	}
 	return false;
+}
+
+Neighbours Terrain::GetNeightbours(int cubeNum)
+{
+	Neighbours n;
+	n.Left = cubeNum <= Cubes.size() - Chunk.y * Chunk.z ? &Cubes[cubeNum + Chunk.y * Chunk.z] : nullptr;
+	n.Right = cubeNum >= Chunk.y * Chunk.z ? &Cubes[cubeNum - Chunk.y * Chunk.z] : nullptr;
+
+	n.Up = cubeNum <= Cubes.size() - Chunk.z ? &Cubes[cubeNum + Chunk.z] : nullptr;
+	n.Down = cubeNum >= Chunk.z ? &Cubes[cubeNum - Chunk.z] : nullptr;
+
+	n.Forward = cubeNum > 0 ? &Cubes[cubeNum - 1] : nullptr;
+	n.Back = cubeNum < Cubes.size() - 1 ? &Cubes[cubeNum + 1] : nullptr;
+
+	return n;
 }

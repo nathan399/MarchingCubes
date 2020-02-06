@@ -65,6 +65,7 @@ private:
 	std::unique_ptr<DirectX::CommonStates> States;
 
 	
+	Neighbours GetNeightbours(int cubeNum);
 
 	struct ConstantBuffer
 	{

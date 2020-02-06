@@ -165,7 +165,7 @@ void Game::Update(DX::StepTimer const& timer)
 		Vector3 ray = (mousePos - pos);
 		ray.Normalize();
 
-		if(terrain.RayCast(pos, ray, 1, 100))
+		if(terrain.RayCast(pos, ray, PointDistance, 100))
 		{
 			switch (AffectType)
 			{
