@@ -114,6 +114,14 @@ void Terrain::generateTerrain(float pointDistance,float frequency, int GridSize,
 	}
 }
 
+void Terrain::UpdateCubes()
+{
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		Cubes[i].UpdateWater();
+	}
+}
+
 void Terrain::AffectMesh(Vector3 pos, bool direction, float radius)
 {
 	for (int i = 0; i < Cubes.size(); i++)
@@ -228,10 +236,10 @@ bool Terrain::RayCast(Vector3& Pos, Vector3 Direction, float RayRadius, int RayC
 Neighbours Terrain::GetNeightbours(int cubeNum)
 {
 	Neighbours n;
-	n.Left = cubeNum <= Cubes.size() - Chunk.y * Chunk.z ? &Cubes[cubeNum + Chunk.y * Chunk.z] : nullptr;
+	n.Left = cubeNum < Cubes.size() - (Chunk.y * Chunk.z) ? &Cubes[cubeNum + Chunk.y * Chunk.z] : nullptr;
 	n.Right = cubeNum >= Chunk.y * Chunk.z ? &Cubes[cubeNum - Chunk.y * Chunk.z] : nullptr;
 
-	n.Up = cubeNum <= Cubes.size() - Chunk.z ? &Cubes[cubeNum + Chunk.z] : nullptr;
+	n.Up = cubeNum < Cubes.size() - Chunk.z ? &Cubes[cubeNum + Chunk.z] : nullptr;
 	n.Down = cubeNum >= Chunk.z ? &Cubes[cubeNum - Chunk.z] : nullptr;
 
 	n.Forward = cubeNum > 0 ? &Cubes[cubeNum - 1] : nullptr;

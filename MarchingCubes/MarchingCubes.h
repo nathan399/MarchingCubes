@@ -30,6 +30,7 @@ struct PointData
 	Vector3 pos;
 	Vector3 normal;
 	float value;
+	bool isSurface = false;
 };
 
 struct Neighbours
@@ -60,6 +61,7 @@ public:
 	std::vector<SVertices> getVertices() { return vertices; }
 	void generate(float pointDistance, float frequency, int GridSize, bool interpolate, float surfaceLevel);
 	void CreateMesh();
+	void UpdateWater();
 	void AffectPoints(Vector3 pos, int direction, float radius);
 	void Smooth(Vector3 pos, float radius);
 	void Flatten(Vector3 pos, float radius);

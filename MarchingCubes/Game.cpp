@@ -165,7 +165,9 @@ void Game::Update(DX::StepTimer const& timer)
 		Vector3 ray = (mousePos - pos);
 		ray.Normalize();
 
-		if(terrain.RayCast(pos, ray, PointDistance, 100))
+		pos = PointAheadPos;
+
+		//if(terrain.RayCast(pos, ray, PointDistance, 100))
 		{
 			switch (AffectType)
 			{
@@ -193,7 +195,7 @@ void Game::Update(DX::StepTimer const& timer)
 		}
 		
 	}
-
+	terrain.UpdateCubes();
 	//if (!mouse.rightButton && mouse.y > 0 && mouse.x > 0)
 	//	std::cout << pos.x << " " <<  pos.y << " " << pos.z << "\n";
 

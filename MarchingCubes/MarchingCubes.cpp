@@ -325,6 +325,7 @@ void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, b
 			for (int z = 0; z < GridSize; z++)
 			{
 				Points[x][y][z].pos = { (float)(x + (convertedPos.x)) * pointDistance,(float)(y + (convertedPos.y )) * pointDistance,(float)(z + (convertedPos.z)) * pointDistance};
+
 				if ((y >= GridSize - 1 && EdgeState.yMax)
 					|| (x == 0 && EdgeState.xMin)
 					|| (x >= GridSize - 1 && EdgeState.xMax)
@@ -351,10 +352,16 @@ void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, b
 						
 						noise = (noise + 2)  - (y + convertedPos.y) / surfaceLevel;
 					}
-
-					/*noise /= 20;*/
-
+					
 					Points[x][y][z].value = noise;
+					if (Points[x][y][z].value > SurfaceLevel)
+						Points[x][y][z].isSurface = true;
+					else
+					{
+						Points[x][y][z].isSurface = false;
+						Points[x][y][z].value = -0.02;
+					}
+						
 				}
 			}
 		}
@@ -390,6 +397,69 @@ void MarchingCubes::CreateMesh()
 		SetBuffer();
 }
 
+void MarchingCubes::UpdateWater()
+{
+	bool change = false;
+	for (int x = 0; x < Points.size(); x++)
+	{
+		for (int y = 0; y < Points[x].size(); y++)
+		{
+			for (int z = 0; z < Points[x][y].size(); z++)
+			{
+				if ((y >= gridSize - 1 && EdgeState.yMax)
+					|| (x == 0 && EdgeState.xMin)
+					|| (x >= gridSize - 1 && EdgeState.xMax)
+					|| (z == 0 && EdgeState.zMin)
+					|| (z >= gridSize - 1 && EdgeState.zMax)
+					|| (y == 0 && EdgeState.yMin))
+
+				{
+					Points[x][y][z].value = -1;
+				}
+				else
+				{
+					if (y == gridSize - 1)
+					{
+						Points[x][y][z].value = neighbours.Up->Points[x][0][z].value;
+					}
+					if (Points[x][y][z].value > SurfaceLevel) //then its water
+					{
+						if (y > 0)
+						{
+							if (Points[x][y - 1][z].value < 0.2)
+							{
+								/*if (Points[x][y - 1][z].value <= SurfaceLevel)
+									Points[x][y - 1][z].value = SurfaceLevel;*/
+
+								Points[x][y][z].value -= 0.001;
+								Points[x][y - 1][z].value += 0.001;
+								change = true;
+							}
+						}
+						else if(y < gridSize - 1)
+						{
+							if (neighbours.Down->Points[x][gridSize - 2][z].value < 0.2)
+							{
+								/*if (neighbours.Down->Points[x][gridSize - 2][z].value <= SurfaceLevel)
+									neighbours.Down->Points[x][gridSize - 2][z].value = SurfaceLevel;*/
+
+								Points[x][y][z].value -= 0.001;
+								neighbours.Down->Points[x][gridSize - 2][z].value += 0.001;
+								change = true;
+							}
+						}
+					}
+					
+						
+				}
+			}
+		}
+	}
+
+	if(change)
+		CreateMesh();
+}
+
 void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius)
 {
 	for (int x = 0; x < Points.size(); x++)
@@ -418,6 +488,7 @@ void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius)
 
 						if (Points[x][y][z].value < MinValue)
 							Points[x][y][z].value = MinValue;
+
 					}
 				}
 			}
@@ -497,6 +568,10 @@ void MarchingCubes::Smooth(Vector3 pos, float radius)
 								Points[x][y][z].value -= 0.04;
 						}
 						
+						if (Points[x][y][z].value > SurfaceLevel) // dirt code
+							Points[x][y][z].isSurface = true;
+						else
+							Points[x][y][z].isSurface = false;
 
 					}
 				}
@@ -513,7 +588,7 @@ void MarchingCubes::Flatten(Vector3 pos, float radius)
 		for (int y = 0; y < Points[x].size(); y++)
 		{
 			for (int z = 0; z < Points[x][y].size(); z++)
-			{
+			{				
 				if ((y >= gridSize - 1 && EdgeState.yMax)
 					|| (x == 0 && EdgeState.xMin)
 					|| (x >= gridSize - 1 && EdgeState.xMax)
@@ -542,6 +617,11 @@ void MarchingCubes::Flatten(Vector3 pos, float radius)
 								Points[x][y][z].value = MinValue;
 						}
 					}
+
+					if (Points[x][y][z].value > SurfaceLevel) // dirt code
+						Points[x][y][z].isSurface = true;
+					else
+						Points[x][y][z].isSurface = false;
 				}
 			}
 		}
