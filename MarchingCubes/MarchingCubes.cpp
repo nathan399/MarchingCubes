@@ -287,6 +287,7 @@ MarchingCubes::MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, sEdges ed
 
 	LoadVertexShader(device, L"simple_vs.hlsl", &mpVertexShader, &VertexCode);
 	LoadPixelShader(device, L"simple_ps.hlsl", &mpPixelShader);
+	LoadPixelShader(device, L"Water_ps.hlsl", &mpWaterPixelShader);
 
 	D3D11_INPUT_ELEMENT_DESC VertexDesc[] =
 	{
@@ -297,7 +298,6 @@ MarchingCubes::MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, sEdges ed
 	int VertexDescCount = sizeof(VertexDesc) / sizeof(VertexDesc[0]); // This gives a count of rows in the array above
 
 	device->CreateInputLayout(VertexDesc, VertexDescCount, VertexCode->GetBufferPointer(), VertexCode->GetBufferSize(), &mpVertexLayout);
-
 	generate(pointDistance, frequency, GridSize, interpolate,20);
 
 }
@@ -332,10 +332,14 @@ void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, b
 					|| (z == 0 && EdgeState.zMin)
 					|| (z >= GridSize - 1 && EdgeState.zMax))
 				{
-					Points[x][y][z].value = -1;
+					Points[x][y][z].value[earth] = -1;
+					Points[x][y][z].value[water] = -1;
 				}
 				else if (y == 0 && EdgeState.yMin)
-					Points[x][y][z].value = 1;
+				{
+					Points[x][y][z].value[earth] = 1;
+					Points[x][y][z].value[water] = -1;
+				}
 				else
 				{
 					bool surface = true; //y + convertedPos.y > 20;
@@ -353,15 +357,8 @@ void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, b
 						noise = (noise + 2)  - (y + convertedPos.y) / surfaceLevel;
 					}
 					
-					Points[x][y][z].value = noise;
-					if (Points[x][y][z].value > SurfaceLevel)
-						Points[x][y][z].isSurface = true;
-					else
-					{
-						Points[x][y][z].isSurface = false;
-						Points[x][y][z].value = -0.02;
-					}
-						
+					Points[x][y][z].value[earth] = noise;
+					Points[x][y][z].value[water] = -0.02;
 				}
 			}
 		}
@@ -369,10 +366,14 @@ void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, b
 	
 }
 
-void MarchingCubes::CreateMesh()
+void MarchingCubes::CreateMesh(int type)
 {
-	CalculateCubeNormals();
-	vertices.clear();
+	CalculateCubeNormals(type);
+	if (type == earth)
+		vertices.clear();
+	else
+		WaterVertices.clear();
+		
 	for (int x = 0; x < Points.size() - 1; x++)
 	{
 		for (int y = 0; y < Points[x].size() - 1; y++)
@@ -389,12 +390,21 @@ void MarchingCubes::CreateMesh()
 				edge[5] = Points[x + 1][y + 1][z + 1];
 				edge[6] = Points[x + 1][y + 1][z];
 				edge[7] = Points[x][y + 1][z];
-				CalculateCubesVerticies(edge);
+				CalculateCubesVerticies(edge, type);
 			}
 		}
 	}
-	if(vertices.size() >0)
-		SetBuffer();
+	if (type == earth)
+	{
+		if (vertices.size() > 0)
+			SetBuffer(type);
+	}
+	else
+	{
+		if (WaterVertices.size() > 0)
+			SetBuffer(type);
+	}
+	
 }
 
 void MarchingCubes::UpdateWater()
@@ -414,37 +424,37 @@ void MarchingCubes::UpdateWater()
 					|| (y == 0 && EdgeState.yMin))
 
 				{
-					Points[x][y][z].value = -1;
+					Points[x][y][z].value[water] = -1;
 				}
 				else
 				{
 					if (y == gridSize - 1)
 					{
-						Points[x][y][z].value = neighbours.Up->Points[x][0][z].value;
+						Points[x][y][z].value[water] = neighbours.Up->Points[x][0][z].value[water];
 					}
-					if (Points[x][y][z].value > SurfaceLevel) //then its water
+					if (Points[x][y][z].value[water] > SurfaceLevel) //then its water
 					{
 						if (y > 0)
 						{
-							if (Points[x][y - 1][z].value < 0.2)
+							if (Points[x][y - 1][z].value[water] < 0.2 && Points[x][y - 1][z].value[earth] < SurfaceLevel)
 							{
 								/*if (Points[x][y - 1][z].value <= SurfaceLevel)
 									Points[x][y - 1][z].value = SurfaceLevel;*/
 
-								Points[x][y][z].value -= 0.001;
-								Points[x][y - 1][z].value += 0.001;
+								Points[x][y][z].value[water] -= 0.001;
+								Points[x][y - 1][z].value[water] += 0.001;
 								change = true;
 							}
 						}
 						else if(y < gridSize - 1)
 						{
-							if (neighbours.Down->Points[x][gridSize - 2][z].value < 0.2)
+							if (neighbours.Down->Points[x][gridSize - 2][z].value[water] < 0.2 && neighbours.Down->Points[x][gridSize - 2][z].value[earth] < SurfaceLevel)
 							{
 								/*if (neighbours.Down->Points[x][gridSize - 2][z].value <= SurfaceLevel)
 									neighbours.Down->Points[x][gridSize - 2][z].value = SurfaceLevel;*/
 
-								Points[x][y][z].value -= 0.001;
-								neighbours.Down->Points[x][gridSize - 2][z].value += 0.001;
+								Points[x][y][z].value[water] -= 0.001;
+								neighbours.Down->Points[x][gridSize - 2][z].value[water] += 0.001;
 								change = true;
 							}
 						}
@@ -457,10 +467,10 @@ void MarchingCubes::UpdateWater()
 	}
 
 	if(change)
-		CreateMesh();
+		CreateMesh(water);
 }
 
-void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius)
+void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius, int type)
 {
 	for (int x = 0; x < Points.size(); x++)
 	{
@@ -474,30 +484,30 @@ void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius)
 					|| (z == 0 && EdgeState.zMin)
 					|| (z >= gridSize - 1 && EdgeState.zMax))
 				{
-					Points[x][y][z].value = -1;
+					Points[x][y][z].value[type] = -1;
 				}
 				else
 				{
 					float length = (Points[x][y][z].pos - pos).Length();
 					if (length < radius)
 					{
-						Points[x][y][z].value += (0.04 * direction) / length;
+						Points[x][y][z].value[type] += (0.04 * direction) / length;
 
-						if (Points[x][y][z].value > MaxValue)
-							Points[x][y][z].value = MaxValue;
+						if (Points[x][y][z].value[type] > MaxValue)
+							Points[x][y][z].value[type] = MaxValue;
 
-						if (Points[x][y][z].value < MinValue)
-							Points[x][y][z].value = MinValue;
+						if (Points[x][y][z].value[type] < MinValue)
+							Points[x][y][z].value[type] = MinValue;
 
 					}
 				}
 			}
 		}
 	}
-	CreateMesh();
+	CreateMesh(type);
 }
 
-void MarchingCubes::Smooth(Vector3 pos, float radius)
+void MarchingCubes::Smooth(Vector3 pos, float radius,int type)
 {
 	for (int x = 0; x < Points.size(); x++)
 	{
@@ -511,7 +521,7 @@ void MarchingCubes::Smooth(Vector3 pos, float radius)
 					|| (z == 0 && EdgeState.zMin)
 					|| (z >= gridSize - 1 && EdgeState.zMax))
 				{
-					Points[x][y][z].value = -1;
+					Points[x][y][z].value[type] = -1;
 				}
 				else
 				{
@@ -523,65 +533,61 @@ void MarchingCubes::Smooth(Vector3 pos, float radius)
 					{
 						//left right connectors
 						if (x < gridSize - 1)
-							average += Points[x + 1][y][z].value;
+							average += Points[x + 1][y][z].value[type];
 						else
-							average += neighbours.Left->Points[1][y][z].value;
+							average += neighbours.Left->Points[1][y][z].value[type];
 							
 
 						if (x > 0)
-							average += Points[x - 1][y][z].value;
+							average += Points[x - 1][y][z].value[type];
 						else
-							average += neighbours.Right->Points[gridSize - 2][y][z].value;
+							average += neighbours.Right->Points[gridSize - 2][y][z].value[type];
 
 						////up down connectors
 						if (y < gridSize - 1)
-							average += Points[x][y + 1][z].value;
+							average += Points[x][y + 1][z].value[type];
 						else
-							average += neighbours.Up->Points[x][1][z].value;
+							average += neighbours.Up->Points[x][1][z].value[type];
 							
 
 						if (y > 0)
-							average += Points[x][y - 1][z].value;
+							average += Points[x][y - 1][z].value[type];
 						else if (!EdgeState.yMin)
-							average += neighbours.Down->Points[x][gridSize - 2][z].value;
+							average += neighbours.Down->Points[x][gridSize - 2][z].value[type];
 						else
 							totals--;
 
 						//forward back connectors
 						if (z < gridSize - 1)
-							average += Points[x][y][z + 1].value;
+							average += Points[x][y][z + 1].value[type];
 						else
-							average += neighbours.Back->Points[x][y][1].value;
+							average += neighbours.Back->Points[x][y][1].value[type];
 
 						if (z > 0)
-							average += Points[x][y][z - 1].value;
+							average += Points[x][y][z - 1].value[type];
 						else
-							average += neighbours.Forward->Points[x][y][gridSize - 2].value;
+							average += neighbours.Forward->Points[x][y][gridSize - 2].value[type];
 							
 
 						average /= totals;
-						if (abs(Points[x][y][z].value - average) > 0.02)
+						if (abs(Points[x][y][z].value[type] - average) > 0.02)
 						{
-							if (Points[x][y][z].value < average)
-								Points[x][y][z].value += 0.04;
+							if (Points[x][y][z].value[type] < average)
+								Points[x][y][z].value[type] += 0.04;
 							else
-								Points[x][y][z].value -= 0.04;
+								Points[x][y][z].value[type] -= 0.04;
 						}
 						
-						if (Points[x][y][z].value > SurfaceLevel) // dirt code
-							Points[x][y][z].isSurface = true;
-						else
-							Points[x][y][z].isSurface = false;
 
 					}
 				}
 			}
 		}
 	}
-	CreateMesh();
+	CreateMesh(type);
 }
 
-void MarchingCubes::Flatten(Vector3 pos, float radius)
+void MarchingCubes::Flatten(Vector3 pos, float radius, int type)
 {
 	for (int x = 0; x < Points.size(); x++)
 	{
@@ -595,7 +601,7 @@ void MarchingCubes::Flatten(Vector3 pos, float radius)
 					|| (z == 0 && EdgeState.zMin)
 					|| (z >= gridSize - 1 && EdgeState.zMax))
 				{
-					Points[x][y][z].value = -1;
+					Points[x][y][z].value[type] = -1;
 				}
 				else
 				{
@@ -604,29 +610,24 @@ void MarchingCubes::Flatten(Vector3 pos, float radius)
 					{
 						if (Points[x][y][z].pos.y <= pos.y)
 						{
-							Points[x][y][z].value += (0.04) / length;
+							Points[x][y][z].value[type] += (0.04) / length;
 
-							if (Points[x][y][z].value > MaxValue)
-								Points[x][y][z].value = MaxValue;
+							if (Points[x][y][z].value[type] > MaxValue)
+								Points[x][y][z].value[type] = MaxValue;
 						}
 						else
 						{
-							Points[x][y][z].value -= (0.04) / length;
+							Points[x][y][z].value[type] -= (0.04) / length;
 
-							if (Points[x][y][z].value < MinValue)
-								Points[x][y][z].value = MinValue;
+							if (Points[x][y][z].value[type] < MinValue)
+								Points[x][y][z].value[type] = MinValue;
 						}
 					}
-
-					if (Points[x][y][z].value > SurfaceLevel) // dirt code
-						Points[x][y][z].isSurface = true;
-					else
-						Points[x][y][z].isSurface = false;
 				}
 			}
 		}
 	}
-	CreateMesh();
+	CreateMesh(type);
 }
 
 bool MarchingCubes::CubeToSphere(Vector3 sPos, float radius)
@@ -673,7 +674,7 @@ bool MarchingCubes::GetSurfacePoint(Vector3& pos, float Radius)
 				float length = (Points[x][y][z].pos - pos).Length();
 				if (length < Radius)
 				{
-					if (Points[x][y][z].value > SurfaceLevel)
+					if (Points[x][y][z].value[earth] > SurfaceLevel)
 					{
 						pos = Points[x][y][z].pos;
 						return true;
@@ -685,36 +686,42 @@ bool MarchingCubes::GetSurfacePoint(Vector3& pos, float Radius)
 	return false;
 }
 
-void MarchingCubes::SetBuffer()
+void MarchingCubes::SetBuffer(int type)
 {
-	if (mVertexBuffer)
-		mVertexBuffer->Release();
-
-	
+	if (mVertexBuffer[type])
+		mVertexBuffer[type]->Release();
 
 	HRESULT hr = S_OK;
 	// Fill in a buffer description.
 	D3D11_BUFFER_DESC bufferDesc;
 	bufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	bufferDesc.ByteWidth = sizeof(CUSTOMVERTEX) * vertices.size();
+	if(type == earth)
+		bufferDesc.ByteWidth = sizeof(CUSTOMVERTEX) * vertices.size();
+	else
+		bufferDesc.ByteWidth = sizeof(CUSTOMVERTEX) * WaterVertices.size();
+
 	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bufferDesc.CPUAccessFlags = 0;
 	bufferDesc.MiscFlags = 0;
 
 	// Fill in the subresource data.
 	D3D11_SUBRESOURCE_DATA InitData;
-	InitData.pSysMem = &vertices[0];
+	if (type == earth)
+		InitData.pSysMem = &vertices[0];
+	else
+		InitData.pSysMem = &WaterVertices[0];
+	
 	InitData.SysMemPitch = 0;
 	InitData.SysMemSlicePitch = 0;
 
 	// Create the vertex buffer.
 	ID3D11Device* device;
 	mpContext->GetDevice(&device);
-	hr = device->CreateBuffer(&bufferDesc, &InitData, &mVertexBuffer);
+	hr = device->CreateBuffer(&bufferDesc, &InitData, &mVertexBuffer[type]);
 
 }
 
-void MarchingCubes::Render(ID3D11RasterizerState* state)
+void MarchingCubes::RenderEarth(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState)
 {
 	if (vertices.size() > 0)
 	{
@@ -723,7 +730,7 @@ void MarchingCubes::Render(ID3D11RasterizerState* state)
 		UINT stride = sizeof(CUSTOMVERTEX);
 		UINT offset = 0;
 
-		mpContext->IASetVertexBuffers(0, 1, &mVertexBuffer, &stride, &offset);
+		mpContext->IASetVertexBuffers(0, 1, &mVertexBuffer[earth], &stride, &offset);
 
 
 		// 2a) Indicate the layout of the vertex buffer
@@ -737,26 +744,58 @@ void MarchingCubes::Render(ID3D11RasterizerState* state)
 		// 3) Select which shaders to use when rendering
 		mpContext->VSSetShader(mpVertexShader, nullptr, 0);
 		mpContext->PSSetShader(mpPixelShader, nullptr, 0);
+		mpContext->OMSetBlendState(BlendState, DirectX::Colors::Black, 0xFFFFFFFF);
+		mpContext->OMSetDepthStencilState(DepthState, 0);
 
 		// 4) Draw 3 vertices, starting at vertex 0. This will draw a triangle using the vertex data and shaders selected
 		mpContext->Draw(vertices.size(), 0);
 	}
 }
+void MarchingCubes::RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState)
+{
+	//draw water
+	if (WaterVertices.size() > 0)
+	{
+		mpContext->RSSetState(state);
+
+		UINT stride = sizeof(CUSTOMVERTEX);
+		UINT offset = 0;
+
+		mpContext->IASetVertexBuffers(0, 1, &mVertexBuffer[water], &stride, &offset);
 
 
-void MarchingCubes::CalculateCubesVerticies(PointData edge[8])
+		// 2a) Indicate the layout of the vertex buffer
+		mpContext->IASetInputLayout(mpVertexLayout);
+
+		// 2b) Also indicate the primitive topology of the buffer. Our buffer holds a triangle list - each set of 3 vertices
+		//     will be connected into a triangle. There are other topologies and we will see them shortly.
+		mpContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+
+		// 3) Select which shaders to use when rendering
+		mpContext->VSSetShader(mpVertexShader, nullptr, 0);
+		mpContext->PSSetShader(mpWaterPixelShader, nullptr, 0);
+		mpContext->OMSetBlendState(BlendState, DirectX::Colors::Black, 0xFFFFFFFF);
+		mpContext->OMSetDepthStencilState(DepthState, 0);
+
+		// 4) Draw 3 vertices, starting at vertex 0. This will draw a triangle using the vertex data and shaders selected
+		mpContext->Draw(WaterVertices.size(), 0);
+	}
+}
+
+void MarchingCubes::CalculateCubesVerticies(PointData edge[8], int type)
 {
 	int ActivePointsbyte = 0;
 
 	//get the value for the lookup table
-	if (edge[0].value > SurfaceLevel) ActivePointsbyte |= 1;
-	if (edge[1].value > SurfaceLevel) ActivePointsbyte |= 2;
-	if (edge[2].value > SurfaceLevel) ActivePointsbyte |= 4;
-	if (edge[3].value > SurfaceLevel) ActivePointsbyte |= 8;
-	if (edge[4].value > SurfaceLevel) ActivePointsbyte |= 16;
-	if (edge[5].value > SurfaceLevel) ActivePointsbyte |= 32;
-	if (edge[6].value > SurfaceLevel) ActivePointsbyte |= 64;
-	if (edge[7].value > SurfaceLevel) ActivePointsbyte |= 128;
+	if (edge[0].value[type] > SurfaceLevel) ActivePointsbyte |= 1;
+	if (edge[1].value[type] > SurfaceLevel) ActivePointsbyte |= 2;
+	if (edge[2].value[type] > SurfaceLevel) ActivePointsbyte |= 4;
+	if (edge[3].value[type] > SurfaceLevel) ActivePointsbyte |= 8;
+	if (edge[4].value[type] > SurfaceLevel) ActivePointsbyte |= 16;
+	if (edge[5].value[type] > SurfaceLevel) ActivePointsbyte |= 32;
+	if (edge[6].value[type] > SurfaceLevel) ActivePointsbyte |= 64;
+	if (edge[7].value[type] > SurfaceLevel) ActivePointsbyte |= 128;
 
 	std::vector<SVertices> triangle;
 
@@ -765,40 +804,40 @@ void MarchingCubes::CalculateCubesVerticies(PointData edge[8])
 		switch (triTable[ActivePointsbyte][x])
 		{
 		case 0:
-			triangle.push_back(CalculateMid(edge[0], edge[1]));
+			triangle.push_back(CalculateMid(edge[0], edge[1],type));
 			break;
 		case 1:
-			triangle.push_back(CalculateMid(edge[1], edge[2]));
+			triangle.push_back(CalculateMid(edge[1], edge[2], type));
 			break;
 		case 2:
-			triangle.push_back(CalculateMid(edge[2], edge[3]));
+			triangle.push_back(CalculateMid(edge[2], edge[3], type));
 			break;
 		case 3:
-			triangle.push_back(CalculateMid(edge[3], edge[0]));
+			triangle.push_back(CalculateMid(edge[3], edge[0], type));
 			break;
 		case 4:
-			triangle.push_back(CalculateMid(edge[4], edge[5]));
+			triangle.push_back(CalculateMid(edge[4], edge[5], type));
 			break;
 		case 5:
-			triangle.push_back(CalculateMid(edge[5], edge[6]));
+			triangle.push_back(CalculateMid(edge[5], edge[6], type));
 			break;
 		case 6:
-			triangle.push_back(CalculateMid(edge[6], edge[7]));
+			triangle.push_back(CalculateMid(edge[6], edge[7], type));
 			break;
 		case 7:
-			triangle.push_back(CalculateMid(edge[7], edge[4]));
+			triangle.push_back(CalculateMid(edge[7], edge[4], type));
 			break;
 		case 8:
-			triangle.push_back(CalculateMid(edge[0], edge[4]));
+			triangle.push_back(CalculateMid(edge[0], edge[4], type));
 			break;
 		case 9:
-			triangle.push_back(CalculateMid(edge[1], edge[5]));
+			triangle.push_back(CalculateMid(edge[1], edge[5], type));
 			break;
 		case 10:
-			triangle.push_back(CalculateMid(edge[2], edge[6]));
+			triangle.push_back(CalculateMid(edge[2], edge[6], type));
 			break;
 		case 11:
-			triangle.push_back(CalculateMid(edge[3], edge[7]));
+			triangle.push_back(CalculateMid(edge[3], edge[7], type));
 			break;
 		case -1:
 			return;
@@ -811,16 +850,28 @@ void MarchingCubes::CalculateCubesVerticies(PointData edge[8])
 
 			Vector3 normal = Normalise(Cross(v2,v1));
 			normal.x *= -1; //flip x because its the only one the wrong way
-			for (auto vert : triangle)
+			if (type == earth)
 			{
-				vertices.push_back({ vert.pos,vert.normal });
+				for (auto vert : triangle)
+				{
+					vertices.push_back({ vert.pos,vert.normal });
+				}
+				triangle.clear();
 			}
-			triangle.clear();
+			else
+			{
+				for (auto vert : triangle)
+				{
+					WaterVertices.push_back({ vert.pos,vert.normal });
+				}
+				triangle.clear();
+			}
+			
 		}
 	}
 }
 
-void MarchingCubes::CalculateCubeNormals()
+void MarchingCubes::CalculateCubeNormals(int type)
 {
 	for (int x = 0; x < Points.size(); x++)
 	{
@@ -844,15 +895,15 @@ void MarchingCubes::CalculateCubeNormals()
 					//left right connectors
 					if (x >= gridSize - 1)
 					{
-						Points[x][y][z].normal.x = Points[x - 1][y][z].value - neighbours.Left->Points[1][y][z].value;
+						Points[x][y][z].normal.x = Points[x - 1][y][z].value[type] -  neighbours.Left->Points[1][y][z].value[type];
 					}
 					else if(x <= 0)
 					{
-						Points[x][y][z].normal.x = neighbours.Right->Points[gridSize - 2][y][z].value - Points[x + 1][y][z].value;
+						Points[x][y][z].normal.x = neighbours.Right->Points[gridSize - 2][y][z].value[type] - Points[x + 1][y][z].value[type];
 					}
 					else
 					{
-						Points[x][y][z].normal.x = Points[x - 1][y][z].value - Points[x + 1][y][z].value;
+						Points[x][y][z].normal.x = Points[x - 1][y][z].value[type] - Points[x + 1][y][z].value[type];
 					}
 						
 
@@ -861,15 +912,15 @@ void MarchingCubes::CalculateCubeNormals()
 
 					if (y >= gridSize - 1)
 					{
-						Points[x][y][z].normal.y = Points[x][y -1][z].value - neighbours.Up->Points[x][1][z].value;
+						Points[x][y][z].normal.y = Points[x][y -1][z].value[type] - neighbours.Up->Points[x][1][z].value[type];
 					}
 					else if (y <= 0)
 					{
-						Points[x][y][z].normal.y = neighbours.Down->Points[x][gridSize - 2][z].value - Points[x][y + 1][z].value;
+						Points[x][y][z].normal.y = neighbours.Down->Points[x][gridSize - 2][z].value[type] - Points[x][y + 1][z].value[type];
 					}
 					else
 					{
-						Points[x][y][z].normal.y = Points[x][y - 1][z].value - Points[x][y + 1][z].value;
+						Points[x][y][z].normal.y = Points[x][y - 1][z].value[type] - Points[x][y + 1][z].value[type];
 					}
 
 
@@ -878,15 +929,15 @@ void MarchingCubes::CalculateCubeNormals()
 					//forward back connectors
 					if (z >= gridSize - 1)
 					{
-						Points[x][y][z].normal.z = Points[x ][y][z -1].value - neighbours.Back->Points[x][y][1].value;
+						Points[x][y][z].normal.z = Points[x ][y][z -1].value[type] - neighbours.Back->Points[x][y][1].value[type];
 					}
 					else if (z <= 0)
 					{
-						Points[x][y][z].normal.z = neighbours.Forward->Points[x][y][gridSize - 2].value - Points[x][y][z + 1].value;
+						Points[x][y][z].normal.z = neighbours.Forward->Points[x][y][gridSize - 2].value[type] - Points[x][y][z + 1].value[type];
 					}
 					else
 					{
-						Points[x][y][z].normal.z = Points[x][y][z - 1].value - Points[x][y][z + 1].value;
+						Points[x][y][z].normal.z = Points[x][y][z - 1].value[type] - Points[x][y][z + 1].value[type];
 					}
 
 
@@ -898,7 +949,7 @@ void MarchingCubes::CalculateCubeNormals()
 	}
 }
 
-SVertices MarchingCubes::CalculateMid(const PointData& p1, const PointData& p2)
+SVertices MarchingCubes::CalculateMid(const PointData& p1, const PointData& p2, int type)
 {
 	if (Interpolate)
 	{
@@ -912,7 +963,7 @@ SVertices MarchingCubes::CalculateMid(const PointData& p1, const PointData& p2)
 		*/
 		{
 			SVertices point;
-			float multiplier = (SurfaceLevel - p1.value) / (p2.value - p1.value);
+			float multiplier = (SurfaceLevel - p1.value[type]) / (p2.value[type] - p1.value[type]);
 			point.pos.x = p1.pos.x + multiplier * (p2.pos.x - p1.pos.x);
 			point.pos.y = p1.pos.y + multiplier * (p2.pos.y - p1.pos.y);
 			point.pos.z = p1.pos.z + multiplier * (p2.pos.z - p1.pos.z);

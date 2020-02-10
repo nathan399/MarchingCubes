@@ -173,22 +173,22 @@ void Game::Update(DX::StepTimer const& timer)
 			{
 			case 0: 
 			{
-				terrain.AffectMesh(pos, true, ToolRadius);
+				terrain.AffectMesh(pos, true, ToolRadius, water);
 				break;
 			}
 			case 1:
 			{
-				terrain.AffectMesh(pos, false, ToolRadius);
+				terrain.AffectMesh(pos, false, ToolRadius,earth);
 				break;
 			}
 			case 2:
 			{
-				terrain.Smooth(pos, ToolRadius);
+				terrain.Smooth(pos, ToolRadius,water);
 				break;
 			}
 			case 3:
 			{
-				terrain.Flatten(pos, ToolRadius);
+				terrain.Flatten(pos, ToolRadius,water);
 				break;
 			}
 			}

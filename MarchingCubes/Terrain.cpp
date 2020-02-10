@@ -96,7 +96,8 @@ void Terrain::setUp(ID3D11DeviceContext* context)
 	}
 	for (int i = 0; i < Cubes.size(); i++)
 	{
-		Cubes[i].CreateMesh();
+		Cubes[i].CreateMesh(earth);
+		Cubes[i].CreateMesh(water);
 	}
 
 }
@@ -110,7 +111,8 @@ void Terrain::generateTerrain(float pointDistance,float frequency, int GridSize,
 	}
 	for (int i = 0; i < Cubes.size(); i++)
 	{
-		Cubes[i].CreateMesh();
+		Cubes[i].CreateMesh(earth);
+		Cubes[i].CreateMesh(water);
 	}
 }
 
@@ -122,30 +124,30 @@ void Terrain::UpdateCubes()
 	}
 }
 
-void Terrain::AffectMesh(Vector3 pos, bool direction, float radius)
+void Terrain::AffectMesh(Vector3 pos, bool direction, float radius, int type)
 {
 	for (int i = 0; i < Cubes.size(); i++)
 	{
 		if(Cubes[i].CubeToSphere(pos,radius))
-			Cubes[i].AffectPoints(pos, direction ? 1 : -1,radius);
+			Cubes[i].AffectPoints(pos, direction ? 1 : -1,radius, type);
 	}
 }
 
-void Terrain::Smooth(Vector3 pos, float radius)
+void Terrain::Smooth(Vector3 pos, float radius, int type)
 {
 	for (int i = 0; i < Cubes.size(); i++)
 	{
 		if (Cubes[i].CubeToSphere(pos, radius))
-			Cubes[i].Smooth(pos, radius);
+			Cubes[i].Smooth(pos, radius, type);
 	}
 }
 
-void Terrain::Flatten(Vector3 pos, float radius)
+void Terrain::Flatten(Vector3 pos, float radius, int type)
 {
 	for (int i = 0; i < Cubes.size(); i++)
 	{
 		if (Cubes[i].CubeToSphere(pos, radius))
-			Cubes[i].Flatten(pos, radius);
+			Cubes[i].Flatten(pos, radius, type);
 	}
 }
 
@@ -209,7 +211,16 @@ void Terrain::render(Matrix viewProj, bool Wireframe)
 
 	for (int i = 0; i < Cubes.size(); i++)
 	{
-		Cubes[i].Render(Wireframe ? States->Wireframe() : States->CullCounterClockwise());
+		Cubes[i].RenderEarth(Wireframe ? States->Wireframe() : States->CullCounterClockwise()
+			, States->Opaque()
+			, States->DepthDefault());
+	}
+
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		Cubes[i].RenderWater(Wireframe ? States->Wireframe() : States->CullCounterClockwise()
+			, States->AlphaBlend()
+			, States->DepthRead());
 	}
 }
 

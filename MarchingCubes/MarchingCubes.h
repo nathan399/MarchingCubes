@@ -13,6 +13,8 @@ using std::vector;
 
 class MarchingCubes;
 
+enum EarthTypes {earth , water};
+
 struct CUSTOMVERTEX
 {
 	float x, y, z; //position
@@ -29,8 +31,7 @@ struct PointData
 {
 	Vector3 pos;
 	Vector3 normal;
-	float value;
-	bool isSurface = false;
+	float value[2];
 };
 
 struct Neighbours
@@ -60,26 +61,28 @@ public:
 	~MarchingCubes() {};
 	std::vector<SVertices> getVertices() { return vertices; }
 	void generate(float pointDistance, float frequency, int GridSize, bool interpolate, float surfaceLevel);
-	void CreateMesh();
+	void CreateMesh(int type);
 	void UpdateWater();
-	void AffectPoints(Vector3 pos, int direction, float radius);
-	void Smooth(Vector3 pos, float radius);
-	void Flatten(Vector3 pos, float radius);
+	void AffectPoints(Vector3 pos, int direction, float radius,int type);
+	void Smooth(Vector3 pos, float radius, int type);
+	void Flatten(Vector3 pos, float radius, int type);
 	bool CubeToSphere(Vector3 sPos, float radius);
 	bool GetSurfacePoint(Vector3& pos, float Radius);
-	void SetBuffer();
-	void Render(ID3D11RasterizerState* state);
-	float GetValueAt(float x, float y, float z) {return Points[x][y][z].value;}
+	void SetBuffer(int type);
+	void RenderEarth(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState);
+	void RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState);
+	float GetValueAt(float x, float y, float z, int type) {return Points[x][y][z].value[type];}
 	
 
 	Neighbours neighbours;
 private:
 	ID3D11InputLayout* mpVertexLayout = NULL;
-	ID3D11Buffer* mVertexBuffer = NULL;
+	ID3D11Buffer* mVertexBuffer[2] = { NULL,NULL };
 	ID3D11Buffer* mpConstantBuffer = NULL;
 
 	ID3D11VertexShader* mpVertexShader = NULL;
 	ID3D11PixelShader* mpPixelShader = NULL;
+	ID3D11PixelShader* mpWaterPixelShader = NULL;
 
 	ID3D11DeviceContext* mpContext = NULL;
 
@@ -89,11 +92,10 @@ private:
 		Matrix World;
 	};
 
-	//std::unique_ptr<DirectX::CommonStates> States;
-
 	FastNoise Noise;
 	vector <vector< vector< PointData>>> Points;
 	vector<SVertices> vertices;
+	vector<SVertices> WaterVertices;
 	float SurfaceLevel = 0;
 	int gridSize = 100;
 	bool Interpolate = true;
@@ -107,9 +109,9 @@ private:
 
 	sEdges EdgeState;
 
-	void CalculateCubesVerticies(PointData edge[8]);
-	void CalculateCubeNormals();
-	SVertices CalculateMid(const PointData& p1, const PointData& p2);
+	void CalculateCubesVerticies(PointData edge[8], int type);
+	void CalculateCubeNormals(int type);
+	SVertices CalculateMid(const PointData& p1, const PointData& p2,int type);
 	Vector3 Cross(const Vector3& v1, const Vector3& v2);
 	Vector3 Normalise(const Vector3& v);
 	

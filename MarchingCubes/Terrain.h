@@ -27,9 +27,9 @@ public:
 	void setUp(ID3D11DeviceContext* context);
 	void generateTerrain(float pointDistance,float frequency,int GridSize,bool interpolate, float surfaceLevel);
 	void UpdateCubes();
-	void AffectMesh(Vector3 pos,bool direction, float radius);
-	void Smooth(Vector3 pos, float radius);
-	void Flatten(Vector3 pos, float radius);
+	void AffectMesh(Vector3 pos,bool direction, float radius, int type);
+	void Smooth(Vector3 pos, float radius, int type);
+	void Flatten(Vector3 pos, float radius, int type);
 	void SetBuffers();
 	void sendData(Matrix viewProj);
 	void render(Matrix viewProj, bool Wireframe);
