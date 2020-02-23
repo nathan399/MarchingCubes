@@ -114,46 +114,6 @@ void Game::Update(DX::StepTimer const& timer)
 
 	camera.Move(move * elapsedTime, pitch, yaw);
 
-	
-	//auto depthStencil2d = m_deviceResources->GetDepthStencil();
-	//auto depthtex = m_deviceResources->GetDepthTexture();
-
-	//auto context = m_deviceResources->GetD3DDeviceContext();
-
-	//context->CopyResource(depthtex, depthStencil2d);
-	//D3D11_MAPPED_SUBRESOURCE mapStructure;
-
-	//int width, height;
-	//GetDefaultSize(width, height);
-
-	//float** pixels = new float* [height];
-	//
-	//context->Map(depthtex, 0, D3D11_MAP_READ, 0, &mapStructure);
-	//char* depth = reinterpret_cast<char*> (mapStructure.pData);
-	//for (int i = 0; i < height; ++i)
-	//{
-	//	pixels[i] = new float[width];
-	//	memcpy(pixels[i], depth, width * sizeof(float));
-	//	depth += (mapStructure.RowPitch);
-	//}
-
-	//context->Unmap(depthtex, 0);
-	//
-	////depth to world pos
-	//float z = pixels[mouse.y][mouse.x] * 2.0 - 1.0;
-
-	//XMVECTOR clipSpacePosition = { mouse.x * 2.0 - 1.0, mouse.y * 2.0 - 1.0, z,1};
-	//XMVECTOR viewSpacePosition = XMVector4Transform(clipSpacePosition, camera.getInverseProj());
-	//
-	//// Perspective division
-	//viewSpacePosition /= viewSpacePosition.m128_f32[3];
-
-	//XMVECTOR worldSpacePosition = XMVector4Transform(viewSpacePosition, camera.getInverseView());
-
-	//Vector3 pos = worldSpacePosition;
-
-	//delete[] pixels;
-
 	if (mouse.leftButton && (mouse.x > 260 || mouse.positionMode == Mouse::MODE_RELATIVE))
 	{
 		Vector3 pos = camera.GetPos();
@@ -165,39 +125,44 @@ void Game::Update(DX::StepTimer const& timer)
 		Vector3 ray = (mousePos - pos);
 		ray.Normalize();
 
-		pos = PointAheadPos;
+		auto raycastType = earth;
+		if (RaycastWater)
+			raycastType = water;
 
-		//if(terrain.RayCast(pos, ray, PointDistance, 100))
+		if(terrain.RayCast(pos, ray, PointDistance, 100, raycastType))
 		{
+			auto state = earth;
+			if (WaterMode)
+				state = water;
+
 			switch (AffectType)
 			{
 			case 0: 
 			{
-				terrain.AffectMesh(pos, true, ToolRadius, water);
+				terrain.AffectMesh(pos, true, ToolRadius, state);
 				break;
 			}
 			case 1:
 			{
-				terrain.AffectMesh(pos, false, ToolRadius,earth);
+				terrain.AffectMesh(pos, false, ToolRadius, state);
 				break;
 			}
 			case 2:
 			{
-				terrain.Smooth(pos, ToolRadius,water);
+				terrain.Smooth(pos, ToolRadius, state);
 				break;
 			}
 			case 3:
 			{
-				terrain.Flatten(pos, ToolRadius,water);
+				terrain.Flatten(pos, ToolRadius, state);
 				break;
 			}
 			}
 		}
 		
 	}
-	terrain.UpdateCubes();
-	//if (!mouse.rightButton && mouse.y > 0 && mouse.x > 0)
-	//	std::cout << pos.x << " " <<  pos.y << " " << pos.z << "\n";
+	if(UpdateWater)
+		terrain.UpdateCubes();
 
     elapsedTime;
 }
@@ -250,13 +215,13 @@ void Game::Render()
 	changed |= ImGui::SliderFloat(" ", &Frequency, 0.1f, 20.f);
 
 	ImGui::Text("Surface Level");
-	changed |= ImGui::SliderFloat("   ", &surfaceLevel, 5.f, 30.f);
+	changed |= ImGui::SliderFloat("  ", &surfaceLevel, 5.f, 30.f);
 
 	ImGui::Text("GridSize");
-	changed |= ImGui::SliderInt("  ", &GridSize, 5, 30);
+	changed |= ImGui::SliderInt("   ", &GridSize, 5, 30);
 
 	ImGui::Text("Interpolate");
-	changed |= ImGui::Checkbox("   ", &interpolate);
+	changed |= ImGui::Checkbox("    ", &interpolate);
 		
 	if(changed)
 		terrain.generateTerrain(PointDistance, Frequency, GridSize, interpolate, surfaceLevel);
@@ -284,15 +249,23 @@ void Game::Render()
 		}
 		ImGui::EndCombo();
 	}
-	//delete[] items;
+	
+	ImGui::Text("Affect water");
+	ImGui::Checkbox("     ", &WaterMode);
+
+	ImGui::Text("Update water");
+	ImGui::Checkbox("      ", &UpdateWater);
+
+	ImGui::Text("Raycast water");
+	ImGui::Checkbox("       ", &RaycastWater);
 
 	ImGui::Text("ToolRadius");
-	ImGui::SliderFloat("      ", &ToolRadius, 1.f, 40.f);
+	ImGui::SliderFloat("        ", &ToolRadius, 1.f, 40.f);
 
 	ImGui::Separator();
 
 	ImGui::Text("Wireframe");
-	ImGui::Checkbox("    ", &wireframe);
+	ImGui::Checkbox("         ", &wireframe);
 	
 
 	ImGui::End();

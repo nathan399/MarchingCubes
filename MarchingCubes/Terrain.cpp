@@ -224,7 +224,7 @@ void Terrain::render(Matrix viewProj, bool Wireframe)
 	}
 }
 
-bool Terrain::RayCast(Vector3& Pos, Vector3 Direction, float RayRadius, int RayCastLoops)
+bool Terrain::RayCast(Vector3& Pos, Vector3 Direction, float RayRadius, int RayCastLoops, int type)
 {
 	for (int increment = 0; increment < RayCastLoops; increment++)
 	{
@@ -233,7 +233,7 @@ bool Terrain::RayCast(Vector3& Pos, Vector3 Direction, float RayRadius, int RayC
 		{
 			if (Cubes[i].CubeToSphere(RayPos, RayRadius))
 			{
-				if (Cubes[i].GetSurfacePoint(RayPos, RayRadius))
+				if (Cubes[i].GetSurfacePoint(RayPos, RayRadius, type))
 				{
 					Pos = RayPos;
 					return true;

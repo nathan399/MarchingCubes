@@ -66,13 +66,16 @@ private:
 
 	//UI Variables 
 	int AffectType = 0;
+
 	float PointDistance = 1.f;
 	float Frequency = 1.f;
 	float surfaceLevel = 20.f;
 	int GridSize = 10;
 	bool interpolate = true;
 	bool wireframe = false;
-	bool extrude = true;
+	bool WaterMode = true;
+	bool UpdateWater = true;
+	bool RaycastWater = false;
 	float ToolRadius = 10.f;
 
 	// Game Objects

@@ -368,6 +368,8 @@ void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, b
 
 void MarchingCubes::CreateMesh(int type)
 {
+	//mesh changed is optimisation for water so it doesnt recalculate when nothing has changed
+	MeshChanged = true;
 	CalculateCubeNormals(type);
 	if (type == earth)
 		vertices.clear();
@@ -409,6 +411,9 @@ void MarchingCubes::CreateMesh(int type)
 
 void MarchingCubes::UpdateWater()
 {
+	if (!MeshChanged)
+		return;
+
 	bool change = false;
 	for (int x = 0; x < Points.size(); x++)
 	{
@@ -428,46 +433,178 @@ void MarchingCubes::UpdateWater()
 				}
 				else
 				{
-					if (y == gridSize - 1)
-					{
-						Points[x][y][z].value[water] = neighbours.Up->Points[x][0][z].value[water];
-					}
+					bool FlownDown = false;
+
+					if (Points[x][y][z].value[water] > 0.2)
+						Points[x][y][z].value[water] = 0.2;
+
+					//y values
+
 					if (Points[x][y][z].value[water] > SurfaceLevel) //then its water
 					{
 						if (y > 0)
 						{
 							if (Points[x][y - 1][z].value[water] < 0.2 && Points[x][y - 1][z].value[earth] < SurfaceLevel)
 							{
-								/*if (Points[x][y - 1][z].value <= SurfaceLevel)
-									Points[x][y - 1][z].value = SurfaceLevel;*/
-
-								Points[x][y][z].value[water] -= 0.001;
-								Points[x][y - 1][z].value[water] += 0.001;
+								//Points[x][y][z].value[water] -= 0.01;
+								Points[x][y - 1][z].value[water] += 0.01;
+								if (y == 1 && !EdgeState.yMin)
+								{
+									neighbours.Down->Points[x][gridSize - 1][z].value[water] = Points[x][y -1][z].value[water];
+									neighbours.Down->MeshChanged = true;
+								}
 								change = true;
+								FlownDown = true;
 							}
 						}
-						else if(y < gridSize - 1)
+						else
 						{
 							if (neighbours.Down->Points[x][gridSize - 2][z].value[water] < 0.2 && neighbours.Down->Points[x][gridSize - 2][z].value[earth] < SurfaceLevel)
 							{
-								/*if (neighbours.Down->Points[x][gridSize - 2][z].value <= SurfaceLevel)
-									neighbours.Down->Points[x][gridSize - 2][z].value = SurfaceLevel;*/
+								//Points[x][y][z].value[water] -= 0.01;
+								neighbours.Down->Points[x][gridSize - 1][z].value[water] = Points[x][y][z].value[water];
+								neighbours.Down->Points[x][gridSize - 2][z].value[water] += 0.01;
+								neighbours.Down->MeshChanged = true;
+								change = true;
+								FlownDown = true;
+							}
+						}
+					}
 
-								Points[x][y][z].value[water] -= 0.001;
-								neighbours.Down->Points[x][gridSize - 2][z].value[water] += 0.001;
+
+					//x values
+					if (Points[x][y][z].value[water] > SurfaceLevel + 0.01 && !FlownDown)
+					{
+						if (x < gridSize - 1)
+						{
+							if (Points[x + 1][y][z].value[water] < 0.2 && Points[x + 1][y][z].value[earth] < SurfaceLevel)
+							{
+								//Points[x][y][z].value[water] -= 0.01;
+								Points[x + 1][y][z].value[water] += 0.01;
+								if (x == gridSize - 2 && !EdgeState.xMax)
+								{
+									neighbours.Left->Points[0][y][z].value[water] = Points[x + 1][y][z].value[water];
+									neighbours.Left->MeshChanged = true;
+								}
+								change = true;
+							}
+
+						}
+						else
+						{
+							if (neighbours.Left->Points[1][y][z].value[water] < 0.2 && neighbours.Left->Points[1][y][z].value[earth] < SurfaceLevel)
+							{
+								//Points[x][y][z].value[water] -= 0.01;
+								neighbours.Left->Points[0][y][z].value[water] = Points[x][y][z].value[water];
+								neighbours.Left->Points[1][y][z].value[water] += 0.01;
+								neighbours.Left->MeshChanged = true;
 								change = true;
 							}
 						}
 					}
-					
-						
+
+					if (Points[x][y][z].value[water] > SurfaceLevel && !FlownDown)
+					{
+						if (x > 0)
+						{
+							if (Points[x - 1][y][z].value[water] < 0.2 && Points[x - 1][y][z].value[earth] < SurfaceLevel)
+							{
+								//Points[x][y][z].value[water] -= 0.01;
+								Points[x - 1][y][z].value[water] += 0.01;
+								if (x == 0)
+								{
+									neighbours.Right->Points[gridSize - 1][y][z].value[water] = Points[x - 1][y][z].value[water];
+									neighbours.Right->MeshChanged = true;
+								}
+								change = true;
+							}
+						}
+						else
+						{
+							if (neighbours.Right->Points[gridSize - 2][y][z].value[water] < 0.2 && neighbours.Right->Points[gridSize - 2][y][z].value[earth] < SurfaceLevel)
+							{
+								//Points[x][y][z].value[water] -= 0.01;
+								neighbours.Right->Points[gridSize - 1][y][z].value[water] = Points[x][y][z].value[water];
+								neighbours.Right->Points[gridSize - 2][y][z].value[water] += 0.01;
+								neighbours.Right->MeshChanged = true;
+								change = true;
+							}
+
+						}
+					}
+					//end of x
+
+					//z values
+					if (Points[x][y][z].value[water] > SurfaceLevel + 0.01 && !FlownDown)
+					{
+						if (z < gridSize - 1)
+						{
+							if (Points[x][y][z + 1].value[water] < 0.2 && Points[x][y][z + 1].value[earth] < SurfaceLevel)
+							{
+								//Points[x][y][z].value[water] -= 0.01;
+								Points[x][y][z + 1].value[water] += 0.01;
+								if (z == gridSize - 2 && !EdgeState.zMax)
+								{
+									neighbours.Back->Points[x][y][0].value[water] = Points[x][y][z + 1].value[water];
+									neighbours.Back->MeshChanged = true;
+								}
+								change = true;
+							}
+
+						}
+						else
+						{
+							if (neighbours.Back->Points[x][y][1].value[water] < 0.2 && neighbours.Back->Points[x][y][1].value[earth] < SurfaceLevel)
+							{
+								//Points[x][y][z].value[water] -= 0.01;
+								neighbours.Back->Points[x][y][0].value[water] = Points[x][y][z].value[water];
+								neighbours.Back->Points[x][y][1].value[water] += 0.01;
+								neighbours.Back->MeshChanged = true;
+								change = true;
+							}
+						}
+					}
+
+
+					if (Points[x][y][z].value[water] > SurfaceLevel && !FlownDown)
+					{
+						if (z > 0)
+						{
+							if (Points[x][y][z - 1].value[water] < 0.2 && Points[x][y][z - 1].value[earth] < SurfaceLevel)
+							{
+								//Points[x][y][z].value[water] -= 0.01;
+								Points[x][y][z - 1].value[water] += 0.01;
+								if (z == 0)
+								{
+									neighbours.Forward->Points[x][y][gridSize - 1].value[water] = Points[x][y][z -1].value[water];
+									neighbours.Forward->MeshChanged = true;
+								}
+								change = true;
+							}
+						}
+						else
+						{
+							if (neighbours.Forward->Points[x][y][gridSize - 2].value[water] < 0.2 && neighbours.Forward->Points[x][y][gridSize - 2].value[earth] < SurfaceLevel)
+							{
+								//Points[x][y][z].value[water] -= 0.01;
+								neighbours.Forward->Points[x][y][gridSize - 1].value[water] = Points[x][y][z].value[water];
+								neighbours.Forward->Points[x][y][gridSize - 2].value[water] += 0.01;
+								neighbours.Forward->MeshChanged = true;
+								change = true;
+							}
+
+						}
+					}
+					//end of z values										
 				}
 			}
 		}
 	}
 
-	if(change)
+	if (change)
 		CreateMesh(water);
+	else
+		MeshChanged = false;
 }
 
 void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius, int type)
@@ -663,7 +800,7 @@ bool MarchingCubes::CubeToSphere(Vector3 sPos, float radius)
 	
 }
 
-bool MarchingCubes::GetSurfacePoint(Vector3& pos, float Radius)
+bool MarchingCubes::GetSurfacePoint(Vector3& pos, float Radius, int type)
 {
 	for (int x = 0; x < Points.size(); x++)
 	{
@@ -674,7 +811,7 @@ bool MarchingCubes::GetSurfacePoint(Vector3& pos, float Radius)
 				float length = (Points[x][y][z].pos - pos).Length();
 				if (length < Radius)
 				{
-					if (Points[x][y][z].value[earth] > SurfaceLevel)
+					if (Points[x][y][z].value[type] > SurfaceLevel)
 					{
 						pos = Points[x][y][z].pos;
 						return true;

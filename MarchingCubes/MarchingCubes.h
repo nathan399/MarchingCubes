@@ -67,7 +67,7 @@ public:
 	void Smooth(Vector3 pos, float radius, int type);
 	void Flatten(Vector3 pos, float radius, int type);
 	bool CubeToSphere(Vector3 sPos, float radius);
-	bool GetSurfacePoint(Vector3& pos, float Radius);
+	bool GetSurfacePoint(Vector3& pos, float Radius, int type);
 	void SetBuffer(int type);
 	void RenderEarth(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState);
 	void RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState);
@@ -75,6 +75,8 @@ public:
 	
 
 	Neighbours neighbours;
+	bool MeshChanged = false;
+
 private:
 	ID3D11InputLayout* mpVertexLayout = NULL;
 	ID3D11Buffer* mVertexBuffer[2] = { NULL,NULL };
@@ -115,6 +117,7 @@ private:
 	Vector3 Cross(const Vector3& v1, const Vector3& v2);
 	Vector3 Normalise(const Vector3& v);
 	
+
 	
 };
 
