@@ -24,7 +24,7 @@ public:
 	Terrain(ChunkSize size);
 	~Terrain() {};
 
-	void setUp(ID3D11DeviceContext* context);
+	void setUp(ID3D11DeviceContext* context, DX::DeviceResources* deviceResources);
 	void generateTerrain(float pointDistance,float frequency,int GridSize,bool interpolate, float surfaceLevel);
 	void UpdateCubes();
 	void AffectMesh(Vector3 pos,bool direction, float radius, int type);
@@ -56,15 +56,16 @@ private:
 	ID3D11SamplerState* mpTextureSampler = nullptr;
 
 	ID3D11DeviceContext* mpContext = NULL;
+	DX::DeviceResources* mpDeviceResources = nullptr;
 
 	Matrix world;
 
 	vector <MarchingCubes> Cubes;
-
 	std::vector<CUSTOMVERTEX> Vertices;
-
 	std::unique_ptr<DirectX::CommonStates> States;
 
+	Microsoft::WRL::ComPtr<ID3D11Texture2D>  DepthTex = nullptr;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DepthSrv = nullptr;
 	
 	Neighbours GetNeightbours(int cubeNum);
 

@@ -53,7 +53,7 @@ void Game::Initialize(HWND window, int width, int height)
 	ImGui_ImplDX11_Init(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext());
 
 	/*initialise objects*/
-	terrain.setUp(m_deviceResources->GetD3DDeviceContext());
+	terrain.setUp(m_deviceResources->GetD3DDeviceContext(),m_deviceResources.get());
 
 	m_keyboard = std::make_unique<Keyboard>();
 	m_mouse = std::make_unique<Mouse>();

@@ -27,7 +27,7 @@ namespace DX
         static const unsigned int c_EnableHDR       = 0x4;
 
         DeviceResources(DXGI_FORMAT backBufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM,
-                        DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT,
+                        DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_R32_TYPELESS,
                         UINT backBufferCount = 2,
                         D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_10_0,
                         unsigned int flags = c_FlipPresent) noexcept;
@@ -44,21 +44,22 @@ namespace DX
         RECT GetOutputSize() const { return m_outputSize; }
 
         // Direct3D Accessors.
-        ID3D11Device1*          GetD3DDevice() const                    { return m_d3dDevice.Get(); }
-        ID3D11DeviceContext1*   GetD3DDeviceContext() const             { return m_d3dContext.Get(); }
-        IDXGISwapChain1*        GetSwapChain() const                    { return m_swapChain.Get(); }
-        D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const           { return m_d3dFeatureLevel; }
-        ID3D11Texture2D*        GetRenderTarget() const                 { return m_renderTarget.Get(); }
-        ID3D11Texture2D*        GetDepthStencil() const                 { return m_depthStencil.Get(); }
-		ID3D11Texture2D*		GetDepthTexture() const					{ return m_depthTexture.Get(); } // <----
-        ID3D11RenderTargetView*	GetRenderTargetView() const             { return m_d3dRenderTargetView.Get(); }
-        ID3D11DepthStencilView* GetDepthStencilView() const             { return m_d3dDepthStencilView.Get(); }
-        DXGI_FORMAT             GetBackBufferFormat() const             { return m_backBufferFormat; }
-        DXGI_FORMAT             GetDepthBufferFormat() const            { return m_depthBufferFormat; }
-        D3D11_VIEWPORT          GetScreenViewport() const               { return m_screenViewport; }
-        UINT                    GetBackBufferCount() const              { return m_backBufferCount; }
-        DXGI_COLOR_SPACE_TYPE   GetColorSpace() const                   { return m_colorSpace; }
-        unsigned int            GetDeviceOptions() const                { return m_options; }
+        ID3D11Device1*           GetD3DDevice() const                    { return m_d3dDevice.Get(); }
+        ID3D11DeviceContext1*    GetD3DDeviceContext() const             { return m_d3dContext.Get(); }
+        IDXGISwapChain1*         GetSwapChain() const                    { return m_swapChain.Get(); }
+        D3D_FEATURE_LEVEL        GetDeviceFeatureLevel() const           { return m_d3dFeatureLevel; }
+        ID3D11Texture2D*         GetRenderTarget() const                 { return m_renderTarget.Get(); }
+        ID3D11Texture2D*         GetDepthStencil() const                 { return m_depthStencil.Get(); }
+		ID3D11Texture2D*		 GetDepthTexture() const				 { return m_depthTexture.Get(); } // <----
+        ID3D11RenderTargetView*	 GetRenderTargetView() const             { return m_d3dRenderTargetView.Get(); }
+        ID3D11DepthStencilView*  GetDepthStencilView() const             { return m_d3dDepthStencilView.Get(); }
+		ID3D11ShaderResourceView*GetDepthSrv() const				     { return m_depthSrv.Get(); }
+        DXGI_FORMAT              GetBackBufferFormat() const             { return m_backBufferFormat; }
+        DXGI_FORMAT              GetDepthBufferFormat() const            { return m_depthBufferFormat; }
+        D3D11_VIEWPORT           GetScreenViewport() const               { return m_screenViewport; }
+        UINT                     GetBackBufferCount() const              { return m_backBufferCount; }
+        DXGI_COLOR_SPACE_TYPE    GetColorSpace() const                   { return m_colorSpace; }
+        unsigned int             GetDeviceOptions() const                { return m_options; }
 
         // Performance events
         void PIXBeginEvent(_In_z_ const wchar_t* name)
@@ -94,6 +95,7 @@ namespace DX
 		Microsoft::WRL::ComPtr<ID3D11Texture2D>         m_depthTexture; //// <--------------
         Microsoft::WRL::ComPtr<ID3D11RenderTargetView>  m_d3dRenderTargetView;
         Microsoft::WRL::ComPtr<ID3D11DepthStencilView>  m_d3dDepthStencilView;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>m_depthSrv;
         D3D11_VIEWPORT                                  m_screenViewport;
 
         // Direct3D properties.

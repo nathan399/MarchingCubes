@@ -6,6 +6,7 @@
 #include <fstream>
 #include <d3dcompiler.h>
 
+#define _DEBUG
 
 // Load a vertex shader, include the file in the project and pass the name (without the .hlsl extension)
 // to this function. The returned pointer needs to be released before quitting
@@ -53,13 +54,19 @@ bool LoadPixelShader(ID3D11Device* device, const std::wstring& fileName, ID3D11P
 	ID3DBlob* shaderCode;
 	ID3DBlob* errors;
 
+	UINT dbgFlags = 0;
+#ifdef  _DEBUG
+	dbgFlags |= D3DCOMPILE_SKIP_OPTIMIZATION | D3DCOMPILE_DEBUG;
+#endif //  _DEBUG
+
+
 	HRESULT hr =
 		D3DCompileFromFile(fileName.c_str(), // File containing pixel shader (HLSL)
 			NULL, NULL,       // Advanced compilation options - not needed here
 			"main",           // Name of entry point in the shader
 			"ps_5_0",         // Target pixel shader hardware - ps_1_1 is lowest level
-							  // ps_2_0 works on most modern video cards, ps_4_0 required for DX10
-			0,                // Additional compilation flags (such as debug flags)
+			    			  // ps_2_0 works on most modern video cards, ps_4_0 required for DX10
+			dbgFlags,         // Additional compilation flags (such as debug flags)
 			0,                // More compilation flags (added in DX10)
 			&shaderCode,      // Ptr to variable to hold compiled shader code
 			&errors);

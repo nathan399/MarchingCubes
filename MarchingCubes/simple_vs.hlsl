@@ -19,6 +19,7 @@ struct VS_INPUT
 struct VS_OUTPUT
 {
 	float4 Pos    : SV_POSITION;
+	float4 ScreenPos : TEXCOORD;
 	float4 WorldPos : POSITION;
 	float3 Normal : NORMAL;
 };
@@ -28,5 +29,6 @@ void main(in VS_INPUT vIn,out VS_OUTPUT vOut)
 	float4 worldPos = mul(float4(vIn.Pos,1), world);
 	vOut.WorldPos = worldPos;
     vOut.Pos = mul(worldPos,viewProj);
+	vOut.ScreenPos = vOut.Pos;
 	vOut.Normal = vIn.Normal;
 }

@@ -6,9 +6,10 @@ Terrain::Terrain(ChunkSize size)
 	Chunk = size;
 }
 
-void Terrain::setUp(ID3D11DeviceContext* context) 
+void Terrain::setUp(ID3D11DeviceContext* context, DX::DeviceResources* deviceResources)
 {
 	mpContext = context;
+	mpDeviceResources = deviceResources;
 
 	ID3D11Device* device;
 	mpContext->GetDevice(&device);
@@ -51,22 +52,30 @@ void Terrain::setUp(ID3D11DeviceContext* context)
 		std::string t = "wtf";
 	}
 
-	//ID3DBlob* VertexCode;
+	//depth texture
+	CD3D11_TEXTURE2D_DESC depthStencilDesc(
+		DXGI_FORMAT_R32_FLOAT,
+		mpDeviceResources->GetOutputSize().right,
+		mpDeviceResources->GetOutputSize().bottom,
+		1, // This depth stencil view has only one texture.
+		1, // Use a single mipmap level.
+		D3D11_BIND_SHADER_RESOURCE
+	);
 
-	//LoadVertexShader(device, L"simple_vs.hlsl", &mpVertexShader, &VertexCode);
-	//LoadPixelShader(device, L"simple_ps.hlsl", &mpPixelShader);
+	DX::ThrowIfFailed(device->CreateTexture2D(
+		&depthStencilDesc,
+		nullptr,
+		DepthTex.ReleaseAndGetAddressOf()
+	));
 
-	//D3D11_INPUT_ELEMENT_DESC VertexDesc[] =
-	//{
-	//	// Data Type,  Type Index,  Data format                      Slot  Offset    Other values can be ignored for now 
-	//	{ "Position",  0,           DXGI_FORMAT_R32G32B32_FLOAT,     0,    0,        D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	//	{ "Normal",  0,           DXGI_FORMAT_R32G32B32_FLOAT,     0,    12,        D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	//};
-	//int VertexDescCount = sizeof(VertexDesc) / sizeof(VertexDesc[0]); // This gives a count of rows in the array above
 
-	//device->CreateInputLayout(VertexDesc, VertexDescCount, VertexCode->GetBufferPointer(), VertexCode->GetBufferSize(), &mpVertexLayout);
+	D3D11_SHADER_RESOURCE_VIEW_DESC srDesc;
+	srDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srDesc.Texture2D.MipLevels = 1;
+	srDesc.Texture2D.MostDetailedMip = 0;
 
-	//SetBuffers();
+	device->CreateShaderResourceView(DepthTex.Get(), &srDesc, DepthSrv.ReleaseAndGetAddressOf());
 
 	//create cubes
 	for (int x = 0; x < Chunk.x; x++)
@@ -186,6 +195,7 @@ void Terrain::SetBuffers()
 	ID3D11Device* device;
 	mpContext->GetDevice(&device);
 	hr = device->CreateBuffer(&bufferDesc, &InitData, &mVertexBuffer);
+
 }
 
 void Terrain::sendData(Matrix viewProj)
@@ -216,12 +226,18 @@ void Terrain::render(Matrix viewProj, bool Wireframe)
 			, States->DepthDefault());
 	}
 
+	auto depth = mpDeviceResources->GetDepthStencil();
+	mpContext->CopyResource(DepthTex.Get(), depth);
+	mpContext->PSSetShaderResources(2, 1, DepthSrv.GetAddressOf());
+
 	for (int i = 0; i < Cubes.size(); i++)
 	{
 		Cubes[i].RenderWater(Wireframe ? States->Wireframe() : States->CullCounterClockwise()
 			, States->AlphaBlend()
 			, States->DepthRead());
 	}
+
+
 }
 
 bool Terrain::RayCast(Vector3& Pos, Vector3 Direction, float RayRadius, int RayCastLoops, int type)
