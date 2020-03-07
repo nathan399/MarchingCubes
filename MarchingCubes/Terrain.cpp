@@ -49,7 +49,7 @@ void Terrain::setUp(ID3D11DeviceContext* context, DX::DeviceResources* deviceRes
 	// Then create a DirectX object for your description that can be used by a shader
 	if (FAILED(device->CreateSamplerState(&samplerDesc, &mpTextureSampler)))
 	{
-		std::string t = "wtf";
+		std::string t = "Sampler failed";
 	}
 
 	//depth texture
@@ -160,49 +160,12 @@ void Terrain::Flatten(Vector3 pos, float radius, int type)
 	}
 }
 
-void Terrain::SetBuffers()
-{
-	Vertices.clear();
-	if(mVertexBuffer)
-		mVertexBuffer->Release();
 
-	for (int i = 0; i < Cubes.size(); i++)
-	{
-		std::vector<SVertices> MarchingVertices = Cubes[i].getVertices();
-
-		for (auto vertex : MarchingVertices)
-		{
-			Vertices.push_back({ vertex.pos.x,vertex.pos.y,vertex.pos.z,vertex.normal.x,vertex.normal.y,vertex.normal.z });
-		}
-	}
-
-	HRESULT hr = S_OK;
-	// Fill in a buffer description.
-	D3D11_BUFFER_DESC bufferDesc;
-	bufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	bufferDesc.ByteWidth = sizeof(CUSTOMVERTEX) * Vertices.size();
-	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bufferDesc.CPUAccessFlags = 0;
-	bufferDesc.MiscFlags = 0;
-
-	// Fill in the subresource data.
-	D3D11_SUBRESOURCE_DATA InitData;
-	InitData.pSysMem = &Vertices[0];
-	InitData.SysMemPitch = 0;
-	InitData.SysMemSlicePitch = 0;
-
-	// Create the vertex buffer.
-	ID3D11Device* device;
-	mpContext->GetDevice(&device);
-	hr = device->CreateBuffer(&bufferDesc, &InitData, &mVertexBuffer);
-
-}
-
-void Terrain::sendData(Matrix viewProj)
+void Terrain::sendData(Matrix viewProj, Matrix viewProjInv)
 {
 	D3D11_MAPPED_SUBRESOURCE data;
 
-	ConstantBuffer dater{ viewProj,world };
+	ConstantBuffer dater{ viewProj,world,viewProj};
 
 	mpContext->Map(mpConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &data);
 	*static_cast<ConstantBuffer*>(data.pData) = dater;
@@ -210,13 +173,16 @@ void Terrain::sendData(Matrix viewProj)
 	mpContext->Unmap(mpConstantBuffer, 0);
 }
 
-void Terrain::render(Matrix viewProj, bool Wireframe)
+void Terrain::render(Matrix viewProj, Matrix viewProjInv,bool Wireframe)
 {
+	sendData(viewProj, viewProjInv);
 
-	sendData(viewProj);
+	//set shader info
+	auto waterSrv = mpDeviceResources->GetWaterHeightSrv();
 	mpContext->VSSetConstantBuffers(0, 1, &mpConstantBuffer);
 	mpContext->PSSetShaderResources(0, 1, &mpDiffuseMapSRV);
 	mpContext->PSSetShaderResources(1, 1, &mpDiffuseMapSRV2);
+	mpContext->PSSetShaderResources(2, 1, &waterSrv);
 	mpContext->PSSetSamplers(0, 1, &mpTextureSampler);
 
 	for (int i = 0; i < Cubes.size(); i++)
@@ -225,6 +191,23 @@ void Terrain::render(Matrix viewProj, bool Wireframe)
 			, States->Opaque()
 			, States->DepthDefault());
 	}
+
+	//water height rendering
+	auto DepthView = mpDeviceResources->GetDepthStencilView();
+	auto waterRenderTarget = mpDeviceResources->GetWaterHeightRenderTargetView();
+	mpContext->OMSetRenderTargets(1, &waterRenderTarget, DepthView);
+	mpContext->ClearRenderTargetView(waterRenderTarget, DirectX::Colors::Black);
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		Cubes[i].RenderWater(States->CullCounterClockwise()
+			, States->AlphaBlend()
+			, States->DepthRead()
+			, true);
+	}
+
+	//reset render target
+	auto RenderTarget = mpDeviceResources->GetRenderTargetView();
+	mpContext->OMSetRenderTargets(1, &RenderTarget, DepthView);
 
 	auto depth = mpDeviceResources->GetDepthStencil();
 	mpContext->CopyResource(DepthTex.Get(), depth);
@@ -236,6 +219,8 @@ void Terrain::render(Matrix viewProj, bool Wireframe)
 			, States->AlphaBlend()
 			, States->DepthRead());
 	}
+
+
 
 
 }

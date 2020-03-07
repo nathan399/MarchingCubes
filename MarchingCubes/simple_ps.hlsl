@@ -1,5 +1,6 @@
 Texture2D    DiffuseMap1 : register(t0); 
 Texture2D    DiffuseMap2 : register(t1);
+Texture2D    WaterHeightMap : register(t2);
 SamplerState TexSampler : register(s0);
 
 struct PS_INPUT
@@ -9,6 +10,10 @@ struct PS_INPUT
 	float4 WorldPos : POSITION;
 	float3 Normal   : NORMAL;
 };
+
+static const float3 WaterExtinction = float3(15, 75, 300);
+static const float  WaterDiffuseLevel = 0.5f;
+static const float  MaxDistortionDistance = 2;
 
 float4 main(in PS_INPUT pIn) : SV_Target
 {
@@ -40,6 +45,21 @@ float4 main(in PS_INPUT pIn) : SV_Target
 
 	float3  diffuseMapColour = diffuseMapColour1 * (1 - lerpV) + diffuseMapColour2 * lerpV;
 
-	return //pIn.Pos.z / pIn.Pos.w;  
-	float4(diffuseMapColour + DiffuseLight1 + AmbientColour,1);    // Yellow, with Alpha = 1
+	float3 color = diffuseMapColour + DiffuseLight1 + AmbientColour;
+
+	float screenspacex = pIn.ScreenPos.x / pIn.ScreenPos.w;
+	float screenspacey = pIn.ScreenPos.y / pIn.ScreenPos.w;
+
+	float x = (1 + screenspacex) / 2 + (0.5 / 800);
+	float y = (1 - screenspacey) / 2 + (0.5 / 600);
+	float2 screenUV = float2(x, y);
+	float waterHeight = WaterHeightMap.Sample(TexSampler, screenUV );
+	float objectDepth = waterHeight - pIn.WorldPos.y;
+	float3 depthDarken = saturate(objectDepth / WaterExtinction);
+	float3 refractionColour = lerp(color, normalize(WaterExtinction) * WaterDiffuseLevel, depthDarken);
+
+	//return //pIn.Pos.z / pIn.Pos.w;  
+	//float4(diffuseMapColour + DiffuseLight1 + AmbientColour,1);    
+
+	return float4(refractionColour, saturate(objectDepth / MaxDistortionDistance));
 }

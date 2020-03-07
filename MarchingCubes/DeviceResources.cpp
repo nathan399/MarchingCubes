@@ -383,6 +383,40 @@ void DeviceResources::CreateWindowSizeDependentResources()
 		m_d3dDevice->CreateShaderResourceView(m_depthStencil.Get(), &srDesc, m_depthSrv.ReleaseAndGetAddressOf());
     }
 
+	//water height
+	{
+		CD3D11_TEXTURE2D_DESC waterHeightTextureDesc(
+			DXGI_FORMAT_R32_FLOAT,
+			backBufferWidth,
+			backBufferHeight,
+			1, // This view has only one texture.
+			1, // Use a single mipmap level.
+			D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE
+		);
+
+		ThrowIfFailed(m_d3dDevice->CreateTexture2D(
+			&waterHeightTextureDesc,
+			nullptr,
+			m_WaterHeightTexture.ReleaseAndGetAddressOf()
+		));
+
+		D3D11_RENDER_TARGET_VIEW_DESC waterHeightTargetViewDesc;
+		waterHeightTargetViewDesc.Format = waterHeightTextureDesc.Format;
+		waterHeightTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		waterHeightTargetViewDesc.Texture2D.MipSlice = 0;
+
+		m_d3dDevice->CreateRenderTargetView(m_WaterHeightTexture.Get(), &waterHeightTargetViewDesc, m_d3dWaterHeightRenderTargetView.ReleaseAndGetAddressOf());
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc;
+		ShaderResourceViewDesc.Format = waterHeightTextureDesc.Format;
+		ShaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		ShaderResourceViewDesc.Texture2D.MipLevels = 1;
+		ShaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+
+		m_d3dDevice->CreateShaderResourceView(m_WaterHeightTexture.Get(), &ShaderResourceViewDesc,m_WaterHeightSrv.ReleaseAndGetAddressOf());
+	}
+
+
     // Set the 3D rendering viewport to target the entire window.
     m_screenViewport = CD3D11_VIEWPORT(
         0.0f,

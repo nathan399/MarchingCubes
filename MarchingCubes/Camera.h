@@ -23,6 +23,7 @@ public:
 	Matrix getViewProj();
 	Matrix getInverseView();
 	Matrix getInverseProj();
+	Matrix getInverseViewProj();
 	Vector3 getZAxis();
 	Vector3 GetPos() { return Position; }
 	Vector3 WorldPointFromPixel(float x, float y, int width, int height);
@@ -36,6 +37,6 @@ private:
 	float MoveSpeed = 50;
 	float RotSpeed = 2;
 	float NearClip = 0.01f;
-	float FarClip = 1000.f;
+	float FarClip = 100.f;
 };
 

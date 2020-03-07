@@ -68,6 +68,11 @@ Matrix Camera::getInverseProj()
 	return ProjMatrix.Invert();
 }
 
+Matrix Camera::getInverseViewProj()
+{
+	return getViewProj().Invert();
+}
+
 Vector3 Camera::getZAxis()
 {
 	return Vector3(ViewMatrix._13, ViewMatrix._23, ViewMatrix._33);

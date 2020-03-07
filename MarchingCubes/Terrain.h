@@ -31,8 +31,8 @@ public:
 	void Smooth(Vector3 pos, float radius, int type);
 	void Flatten(Vector3 pos, float radius, int type);
 	void SetBuffers();
-	void sendData(Matrix viewProj);
-	void render(Matrix viewProj, bool Wireframe);
+	void sendData(Matrix viewProj, Matrix viewProjInv);
+	void render(Matrix viewProj, Matrix viewProjInv, bool Wireframe);
 
 	bool RayCast(Vector3& Pos, Vector3 Direction, float RayRadius, int RayCastLoops, int type);
 	
@@ -73,6 +73,7 @@ private:
 	{
 		Matrix ViewProj;
 		Matrix World;
+		Matrix ViewProjInv;
 	};
 };
 

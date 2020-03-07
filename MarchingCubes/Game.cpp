@@ -188,7 +188,7 @@ void Game::Render()
    
 	camera.Render();
 
-	terrain.render(camera.getViewProj(),wireframe);
+	terrain.render(camera.getViewProj(),camera.getInverseViewProj(),wireframe);
 
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
@@ -286,6 +286,7 @@ void Game::Clear()
     // Clear the views.
     auto context = m_deviceResources->GetD3DDeviceContext();
     auto renderTarget = m_deviceResources->GetRenderTargetView();
+	auto waterHewightRenderTarget = m_deviceResources->GetWaterHeightRenderTargetView();
     auto depthStencil = m_deviceResources->GetDepthStencilView();
 
     context->ClearRenderTargetView(renderTarget, Colors::CornflowerBlue);

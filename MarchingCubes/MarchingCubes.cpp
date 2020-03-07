@@ -288,6 +288,7 @@ MarchingCubes::MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, sEdges ed
 	LoadVertexShader(device, L"simple_vs.hlsl", &mpVertexShader, &VertexCode);
 	LoadPixelShader(device, L"simple_ps.hlsl", &mpPixelShader);
 	LoadPixelShader(device, L"Water_ps.hlsl", &mpWaterPixelShader);
+	LoadPixelShader(device, L"WaterHeight_ps.hlsl", &mpWaterHeightPixelShader);
 
 	D3D11_INPUT_ELEMENT_DESC VertexDesc[] =
 	{
@@ -626,6 +627,11 @@ void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius, int t
 				else
 				{
 					float length = (Points[x][y][z].pos - pos).Length();
+
+					//stop placing water in earth
+					if (type == water && Points[x][y][z].value[earth] > SurfaceLevel)
+						continue;
+						
 					if (length < radius)
 					{
 						Points[x][y][z].value[type] += (0.04 * direction) / length;
@@ -888,7 +894,7 @@ void MarchingCubes::RenderEarth(ID3D11RasterizerState* state, ID3D11BlendState* 
 		mpContext->Draw(vertices.size(), 0);
 	}
 }
-void MarchingCubes::RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState)
+void MarchingCubes::RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState, bool HeightRender)
 {
 	//draw water
 	if (WaterVertices.size() > 0)
@@ -911,7 +917,11 @@ void MarchingCubes::RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* 
 
 		// 3) Select which shaders to use when rendering
 		mpContext->VSSetShader(mpVertexShader, nullptr, 0);
-		mpContext->PSSetShader(mpWaterPixelShader, nullptr, 0);
+		if(HeightRender)
+			mpContext->PSSetShader(mpWaterHeightPixelShader, nullptr, 0);
+		else
+			mpContext->PSSetShader(mpWaterPixelShader, nullptr, 0);
+		
 		mpContext->OMSetBlendState(BlendState, DirectX::Colors::Black, 0xFFFFFFFF);
 		mpContext->OMSetDepthStencilState(DepthState, 0);
 

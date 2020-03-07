@@ -14,13 +14,18 @@ bool LoadVertexShader(ID3D11Device* device, const std::wstring& fileName, ID3D11
 {
 	ID3DBlob* errors;
 
+	UINT dbgFlags = 0;
+#ifdef  _DEBUG
+	dbgFlags |= D3DCOMPILE_SKIP_OPTIMIZATION | D3DCOMPILE_DEBUG;
+#endif //  _DEBUG
+
 	HRESULT hr =
 		D3DCompileFromFile(fileName.c_str(), // File containing pixel shader (HLSL)
 			NULL, NULL,       // Advanced compilation options - not needed here
 			"main",           // Name of entry point in the shader
 			"vs_5_0",         // Target vertex shader hardware - vs_1_1 is lowest level
 							  // vs_2_0 works on most modern video cards, vs_4_0 required for DX10
-			0,                // Additional compilation flags (such as debug flags)
+			dbgFlags,                // Additional compilation flags (such as debug flags)
 			0,                // More compilation flags (added in DX10)
 			shaderCode,       // Ptr to variable to hold compiled shader code
 			&errors);

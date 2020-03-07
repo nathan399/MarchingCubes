@@ -50,10 +50,15 @@ namespace DX
         D3D_FEATURE_LEVEL        GetDeviceFeatureLevel() const           { return m_d3dFeatureLevel; }
         ID3D11Texture2D*         GetRenderTarget() const                 { return m_renderTarget.Get(); }
         ID3D11Texture2D*         GetDepthStencil() const                 { return m_depthStencil.Get(); }
-		ID3D11Texture2D*		 GetDepthTexture() const				 { return m_depthTexture.Get(); } // <----
+		ID3D11Texture2D*		 GetDepthTexture() const				 { return m_depthTexture.Get(); } 
         ID3D11RenderTargetView*	 GetRenderTargetView() const             { return m_d3dRenderTargetView.Get(); }
         ID3D11DepthStencilView*  GetDepthStencilView() const             { return m_d3dDepthStencilView.Get(); }
 		ID3D11ShaderResourceView*GetDepthSrv() const				     { return m_depthSrv.Get(); }
+
+		ID3D11Texture2D* GetWaterHeightTexture() const					 { return m_WaterHeightTexture.Get(); } 
+		ID3D11RenderTargetView* GetWaterHeightRenderTargetView() const   { return m_d3dWaterHeightRenderTargetView.Get(); }
+		ID3D11ShaderResourceView* GetWaterHeightSrv() const				 { return m_WaterHeightSrv.Get(); }
+
         DXGI_FORMAT              GetBackBufferFormat() const             { return m_backBufferFormat; }
         DXGI_FORMAT              GetDepthBufferFormat() const            { return m_depthBufferFormat; }
         D3D11_VIEWPORT           GetScreenViewport() const               { return m_screenViewport; }
@@ -92,10 +97,15 @@ namespace DX
         // Direct3D rendering objects. Required for 3D.
         Microsoft::WRL::ComPtr<ID3D11Texture2D>         m_renderTarget;
         Microsoft::WRL::ComPtr<ID3D11Texture2D>         m_depthStencil;
-		Microsoft::WRL::ComPtr<ID3D11Texture2D>         m_depthTexture; //// <--------------
+		Microsoft::WRL::ComPtr<ID3D11Texture2D>         m_depthTexture; 
         Microsoft::WRL::ComPtr<ID3D11RenderTargetView>  m_d3dRenderTargetView;
         Microsoft::WRL::ComPtr<ID3D11DepthStencilView>  m_d3dDepthStencilView;
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>m_depthSrv;
+
+		Microsoft::WRL::ComPtr<ID3D11Texture2D>         m_WaterHeightTexture;
+		Microsoft::WRL::ComPtr<ID3D11RenderTargetView>  m_d3dWaterHeightRenderTargetView;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>m_WaterHeightSrv;
+
         D3D11_VIEWPORT                                  m_screenViewport;
 
         // Direct3D properties.

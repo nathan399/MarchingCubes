@@ -70,7 +70,7 @@ public:
 	bool GetSurfacePoint(Vector3& pos, float Radius, int type);
 	void SetBuffer(int type);
 	void RenderEarth(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState);
-	void RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState);
+	void RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState , bool HeightRender = false);
 	float GetValueAt(float x, float y, float z, int type) {return Points[x][y][z].value[type];}
 	
 
@@ -85,6 +85,7 @@ private:
 	ID3D11VertexShader* mpVertexShader = NULL;
 	ID3D11PixelShader* mpPixelShader = NULL;
 	ID3D11PixelShader* mpWaterPixelShader = NULL;
+	ID3D11PixelShader* mpWaterHeightPixelShader = NULL;
 
 	ID3D11DeviceContext* mpContext = NULL;
 
