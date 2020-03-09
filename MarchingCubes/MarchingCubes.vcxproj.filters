@@ -114,5 +114,8 @@
     <FxCompile Include="WaterHeight_ps.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="WaterVS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

@@ -3,6 +3,12 @@ Texture2D    DiffuseMap2 : register(t1);
 Texture2D    WaterHeightMap : register(t2);
 SamplerState TexSampler : register(s0);
 
+
+cbuffer CameraPosConstantBuffer
+{
+	float3 CameraPos;
+};
+
 struct PS_INPUT
 {
 	float4 Pos      : SV_POSITION;

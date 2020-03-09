@@ -286,9 +286,10 @@ MarchingCubes::MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, sEdges ed
 	ID3DBlob* VertexCode;
 
 	LoadVertexShader(device, L"simple_vs.hlsl", &mpVertexShader, &VertexCode);
+	LoadVertexShader(device, L"WaterVS.hlsl", &mpWaterVertexShader, &VertexCode);
 	LoadPixelShader(device, L"simple_ps.hlsl", &mpPixelShader);
 	LoadPixelShader(device, L"Water_ps.hlsl", &mpWaterPixelShader);
-	LoadPixelShader(device, L"WaterHeight_ps.hlsl", &mpWaterHeightPixelShader);
+	LoadPixelShader(device, L"WaterHeight_ps.hlsl", &mpWaterHeightPixelShader); 
 
 	D3D11_INPUT_ELEMENT_DESC VertexDesc[] =
 	{
@@ -916,7 +917,7 @@ void MarchingCubes::RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* 
 
 
 		// 3) Select which shaders to use when rendering
-		mpContext->VSSetShader(mpVertexShader, nullptr, 0);
+		mpContext->VSSetShader(mpWaterVertexShader, nullptr, 0);
 		if(HeightRender)
 			mpContext->PSSetShader(mpWaterHeightPixelShader, nullptr, 0);
 		else

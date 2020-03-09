@@ -25,6 +25,11 @@ void Terrain::setUp(ID3D11DeviceContext* context, DX::DeviceResources* deviceRes
 
 	hr = device->CreateBuffer(&constantBufferDesc, nullptr, &mpConstantBuffer);
 
+	constantBufferDesc.ByteWidth = sizeof(WaterConstantBuffer);
+	hr = device->CreateBuffer(&constantBufferDesc, nullptr, &mpWaterConstantBuffer);
+	constantBufferDesc.ByteWidth = sizeof(CameraConstantBuffer);
+	hr = device->CreateBuffer(&constantBufferDesc, nullptr, &mpCameraConstantBuffer);
+
 	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Rock.jpg", &mpDiffuseMap, &mpDiffuseMapSRV)))
 	{
 		std::string t = "Texture failed";
@@ -34,6 +39,13 @@ void Terrain::setUp(ID3D11DeviceContext* context, DX::DeviceResources* deviceRes
 	{
 		std::string t = "Texture failed";
 	}
+
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/WaterNormalHeight.png", &mpWaterHeightMap, &mpWaterHeightMapSRV)))
+	{
+		std::string t = "Texture failed";
+	}
+
+	
 
 	D3D11_SAMPLER_DESC samplerDesc = {};
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT; // Filtering method - see lecture
@@ -161,25 +173,42 @@ void Terrain::Flatten(Vector3 pos, float radius, int type)
 }
 
 
-void Terrain::sendData(Matrix viewProj, Matrix viewProjInv)
+void Terrain::sendData(Matrix viewProj, Matrix viewProjInv, float frameTime, Vector3 CameraPos)
 {
 	D3D11_MAPPED_SUBRESOURCE data;
 
-	ConstantBuffer dater{ viewProj,world,viewProj};
+	ConstantBuffer ModelData{ viewProj,world,viewProj};
 
 	mpContext->Map(mpConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &data);
-	*static_cast<ConstantBuffer*>(data.pData) = dater;
+	*static_cast<ConstantBuffer*>(data.pData) = ModelData;
 
 	mpContext->Unmap(mpConstantBuffer, 0);
+
+	WaterConstantBuffer WaterData{ frameTime,0.f,0.f,0.f };
+
+	mpContext->Map(mpWaterConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &data);
+	*static_cast<WaterConstantBuffer*>(data.pData) = WaterData;
+
+	mpContext->Unmap(mpWaterConstantBuffer, 0);
+
+	CameraConstantBuffer CameraData{ CameraPos.x,CameraPos.y,CameraPos.z,0.f };
+
+	mpContext->Map(mpCameraConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &data);
+	*static_cast<CameraConstantBuffer*>(data.pData) = CameraData;
+
+	mpContext->Unmap(mpCameraConstantBuffer, 0);
 }
 
-void Terrain::render(Matrix viewProj, Matrix viewProjInv,bool Wireframe)
+void Terrain::render(Matrix viewProj, Matrix viewProjInv,bool Wireframe, float frameTime, Vector3 CameraPos)
 {
-	sendData(viewProj, viewProjInv);
+	sendData(viewProj, viewProjInv, frameTime, CameraPos);
 
 	//set shader info
 	auto waterSrv = mpDeviceResources->GetWaterHeightSrv();
 	mpContext->VSSetConstantBuffers(0, 1, &mpConstantBuffer);
+	mpContext->VSSetConstantBuffers(1, 1, &mpWaterConstantBuffer);
+	mpContext->PSSetConstantBuffers(0, 1, &mpCameraConstantBuffer);
+	mpContext->PSSetConstantBuffers(1, 1, &mpWaterConstantBuffer);
 	mpContext->PSSetShaderResources(0, 1, &mpDiffuseMapSRV);
 	mpContext->PSSetShaderResources(1, 1, &mpDiffuseMapSRV2);
 	mpContext->PSSetShaderResources(2, 1, &waterSrv);
@@ -192,16 +221,22 @@ void Terrain::render(Matrix viewProj, Matrix viewProjInv,bool Wireframe)
 			, States->DepthDefault());
 	}
 
+	mpContext->PSSetShaderResources(2, 1, &mpDiffuseMapSRV2);
+
 	//water height rendering
 	auto DepthView = mpDeviceResources->GetDepthStencilView();
 	auto waterRenderTarget = mpDeviceResources->GetWaterHeightRenderTargetView();
 	mpContext->OMSetRenderTargets(1, &waterRenderTarget, DepthView);
 	mpContext->ClearRenderTargetView(waterRenderTarget, DirectX::Colors::Black);
+
+	mpContext->VSSetShaderResources(0, 1, &mpWaterHeightMapSRV);
+	mpContext->VSSetSamplers(0, 1, &mpTextureSampler);
+
 	for (int i = 0; i < Cubes.size(); i++)
 	{
 		Cubes[i].RenderWater(States->CullCounterClockwise()
 			, States->AlphaBlend()
-			, States->DepthRead()
+			, States->DepthDefault()
 			, true);
 	}
 
@@ -211,13 +246,13 @@ void Terrain::render(Matrix viewProj, Matrix viewProjInv,bool Wireframe)
 
 	auto depth = mpDeviceResources->GetDepthStencil();
 	mpContext->CopyResource(DepthTex.Get(), depth);
-	mpContext->PSSetShaderResources(2, 1, DepthSrv.GetAddressOf());
+	mpContext->PSSetShaderResources(2, 1, &mpWaterHeightMapSRV);
 
 	for (int i = 0; i < Cubes.size(); i++)
 	{
 		Cubes[i].RenderWater(Wireframe ? States->Wireframe() : States->CullCounterClockwise()
 			, States->AlphaBlend()
-			, States->DepthRead());
+			, States->DepthDefault());
 	}
 
 

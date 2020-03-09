@@ -83,6 +83,7 @@ private:
 	ID3D11Buffer* mpConstantBuffer = NULL;
 
 	ID3D11VertexShader* mpVertexShader = NULL;
+	ID3D11VertexShader* mpWaterVertexShader = NULL;
 	ID3D11PixelShader* mpPixelShader = NULL;
 	ID3D11PixelShader* mpWaterPixelShader = NULL;
 	ID3D11PixelShader* mpWaterHeightPixelShader = NULL;

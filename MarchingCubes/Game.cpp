@@ -188,7 +188,7 @@ void Game::Render()
    
 	camera.Render();
 
-	terrain.render(camera.getViewProj(),camera.getInverseViewProj(),wireframe);
+	terrain.render(camera.getViewProj(),camera.getInverseViewProj(),wireframe, m_timer.GetTotalSeconds(), camera.GetPos());
 
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();

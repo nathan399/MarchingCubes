@@ -31,8 +31,8 @@ public:
 	void Smooth(Vector3 pos, float radius, int type);
 	void Flatten(Vector3 pos, float radius, int type);
 	void SetBuffers();
-	void sendData(Matrix viewProj, Matrix viewProjInv);
-	void render(Matrix viewProj, Matrix viewProjInv, bool Wireframe);
+	void sendData(Matrix viewProj, Matrix viewProjInv, float frameTime, Vector3 CameraPos);
+	void render(Matrix viewProj, Matrix viewProjInv, bool Wireframe, float frameTime, Vector3 CameraPos);
 
 	bool RayCast(Vector3& Pos, Vector3 Direction, float RayRadius, int RayCastLoops, int type);
 	
@@ -44,14 +44,18 @@ private:
 	ID3D11InputLayout* mpVertexLayout = NULL;
 	ID3D11Buffer* mVertexBuffer = NULL;
 	ID3D11Buffer* mpConstantBuffer = NULL;
+	ID3D11Buffer* mpWaterConstantBuffer = NULL;
+	ID3D11Buffer* mpCameraConstantBuffer = NULL;
 
 	ID3D11VertexShader* mpVertexShader = NULL;
 	ID3D11PixelShader* mpPixelShader = NULL;
 
 	ID3D11Resource* mpDiffuseMap = nullptr; // This object represents the memory used by the texture on the GPU
 	ID3D11ShaderResourceView* mpDiffuseMapSRV = nullptr; // This object is used to give shaders access to the texture above (SRV = shader resource view)
-	ID3D11Resource* mpDiffuseMap2 = nullptr; // This object represents the memory used by the texture on the GPU
-	ID3D11ShaderResourceView* mpDiffuseMapSRV2 = nullptr; // This object is used to give shaders access to the texture above (SRV = shader resource view)
+	ID3D11Resource* mpDiffuseMap2 = nullptr; 
+	ID3D11ShaderResourceView* mpDiffuseMapSRV2 = nullptr; 
+	ID3D11Resource* mpWaterHeightMap = nullptr; 
+	ID3D11ShaderResourceView* mpWaterHeightMapSRV = nullptr;
 
 	ID3D11SamplerState* mpTextureSampler = nullptr;
 
@@ -74,6 +78,22 @@ private:
 		Matrix ViewProj;
 		Matrix World;
 		Matrix ViewProjInv;
+	};
+
+	struct WaterConstantBuffer
+	{
+		float WaterMovement;
+		float Pad1;
+		float Pad2;
+		float Pad3;
+	};
+
+	struct CameraConstantBuffer
+	{
+		float x;
+		float y;
+		float z;
+		float Pad1;
 	};
 };
 
