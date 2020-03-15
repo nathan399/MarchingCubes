@@ -30,20 +30,20 @@ void Terrain::setUp(ID3D11DeviceContext* context, DX::DeviceResources* deviceRes
 	constantBufferDesc.ByteWidth = sizeof(CameraConstantBuffer);
 	hr = device->CreateBuffer(&constantBufferDesc, nullptr, &mpCameraConstantBuffer);
 
-	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Rock.jpg", &mpDiffuseMap, &mpDiffuseMapSRV)))
-	{
-		std::string t = "Texture failed";
-	}
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/mossy-ground1-albedo.dds", &SurfaceTextures.mpAlbedoMap, &SurfaceTextures.mpAlbedoMapSRV))) {std::string t = "Texture failed";}
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/mossy-ground1-roughness.dds", &SurfaceTextures.mpRoughnessMap, &SurfaceTextures.mpRoughnessMapSRV))) { std::string t = "Texture failed"; }
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/mossy-ground1-metalness.dds", &SurfaceTextures.mpMetalnessMap, &SurfaceTextures.mpMetalnessMapSRV))) { std::string t = "Texture failed"; }
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/mossy-ground1-normal.dds", &SurfaceTextures.mpNormalMap, &SurfaceTextures.mpNormalMapSRV))) { std::string t = "Texture failed"; }
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/mossy-ground1-height.dds", &SurfaceTextures.mpHeightMap, &SurfaceTextures.mpHeightMapSRV))) { std::string t = "Texture failed"; }
 
-	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Grass.jpg", &mpDiffuseMap2, &mpDiffuseMapSRV2)))
-	{
-		std::string t = "Texture failed";
-	}
 
-	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/WaterNormalHeight.png", &mpWaterHeightMap, &mpWaterHeightMapSRV)))
-	{
-		std::string t = "Texture failed";
-	}
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Cliff_Albedo.jpg", &EdgeTextures.mpAlbedoMap, &EdgeTextures.mpAlbedoMapSRV))) {std::string t = "Texture failed";}
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Cliff_roughness.dds", &EdgeTextures.mpRoughnessMap, &EdgeTextures.mpRoughnessMapSRV))) { std::string t = "Texture failed"; }
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/mossy-ground1-metalness.dds", &EdgeTextures.mpMetalnessMap, &EdgeTextures.mpMetalnessMapSRV))) { std::string t = "Texture failed"; }
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/Cliff_normal.dds", &EdgeTextures.mpNormalMap, &EdgeTextures.mpNormalMapSRV))) { std::string t = "Texture failed"; }
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"MediaCliff_height.dds", &EdgeTextures.mpHeightMap, &EdgeTextures.mpHeightMapSRV))) { std::string t = "Texture failed"; }
+
+	if (FAILED(DirectX::CreateWICTextureFromFile(device, context, L"Media/WaterNormalHeight.png", &mpWaterHeightMap, &mpWaterHeightMapSRV))) {std::string t = "Texture failed";}
 
 	
 
@@ -209,9 +209,19 @@ void Terrain::render(Matrix viewProj, Matrix viewProjInv,bool Wireframe, float f
 	mpContext->VSSetConstantBuffers(1, 1, &mpWaterConstantBuffer);
 	mpContext->PSSetConstantBuffers(0, 1, &mpCameraConstantBuffer);
 	mpContext->PSSetConstantBuffers(1, 1, &mpWaterConstantBuffer);
-	mpContext->PSSetShaderResources(0, 1, &mpDiffuseMapSRV);
-	mpContext->PSSetShaderResources(1, 1, &mpDiffuseMapSRV2);
-	mpContext->PSSetShaderResources(2, 1, &waterSrv);
+
+	//set textures
+	mpContext->PSSetShaderResources(0, 1, &EdgeTextures.mpAlbedoMapSRV);
+	mpContext->PSSetShaderResources(1, 1, &EdgeTextures.mpRoughnessMapSRV);
+	mpContext->PSSetShaderResources(2, 1, &EdgeTextures.mpMetalnessMapSRV);
+	mpContext->PSSetShaderResources(3, 1, &EdgeTextures.mpNormalMapSRV);
+	mpContext->PSSetShaderResources(4, 1, &EdgeTextures.mpHeightMapSRV);
+	mpContext->PSSetShaderResources(5, 1, &SurfaceTextures.mpAlbedoMapSRV);
+	mpContext->PSSetShaderResources(6, 1, &SurfaceTextures.mpRoughnessMapSRV);
+	mpContext->PSSetShaderResources(7, 1, &SurfaceTextures.mpMetalnessMapSRV);
+	mpContext->PSSetShaderResources(8, 1, &SurfaceTextures.mpNormalMapSRV);
+	mpContext->PSSetShaderResources(9, 1, &SurfaceTextures.mpHeightMapSRV);
+	mpContext->PSSetShaderResources(10, 1, &waterSrv);
 	mpContext->PSSetSamplers(0, 1, &mpTextureSampler);
 
 	for (int i = 0; i < Cubes.size(); i++)
@@ -221,7 +231,7 @@ void Terrain::render(Matrix viewProj, Matrix viewProjInv,bool Wireframe, float f
 			, States->DepthDefault());
 	}
 
-	mpContext->PSSetShaderResources(2, 1, &mpDiffuseMapSRV2);
+	mpContext->PSSetShaderResources(10, 1, &SurfaceTextures.mpAlbedoMapSRV);
 
 	//water height rendering
 	auto DepthView = mpDeviceResources->GetDepthStencilView();
