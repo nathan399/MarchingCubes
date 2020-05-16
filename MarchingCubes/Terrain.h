@@ -18,20 +18,6 @@ struct ChunkSize
 	int z;
 };
 
-struct ObjectTextures
-{
-	ID3D11Resource* mpAlbedoMap = nullptr;
-	ID3D11ShaderResourceView* mpAlbedoMapSRV = nullptr;
-	ID3D11Resource* mpRoughnessMap = nullptr;
-	ID3D11ShaderResourceView* mpRoughnessMapSRV = nullptr;
-	ID3D11Resource* mpMetalnessMap = nullptr;
-	ID3D11ShaderResourceView* mpMetalnessMapSRV = nullptr;
-	ID3D11Resource* mpNormalMap = nullptr;
-	ID3D11ShaderResourceView* mpNormalMapSRV = nullptr;
-	ID3D11Resource* mpHeightMap = nullptr;
-	ID3D11ShaderResourceView* mpHeightMapSRV = nullptr;
-};
-
 class Terrain
 {
 public:
@@ -64,8 +50,10 @@ private:
 	ID3D11VertexShader* mpVertexShader = NULL;
 	ID3D11PixelShader* mpPixelShader = NULL;
 
-	ObjectTextures SurfaceTextures; 
-	ObjectTextures EdgeTextures;
+	ID3D11Resource* mpDiffuseMap = nullptr; // This object represents the memory used by the texture on the GPU
+	ID3D11ShaderResourceView* mpDiffuseMapSRV = nullptr; // This object is used to give shaders access to the texture above (SRV = shader resource view)
+	ID3D11Resource* mpDiffuseMap2 = nullptr; 
+	ID3D11ShaderResourceView* mpDiffuseMapSRV2 = nullptr; 
 	ID3D11Resource* mpWaterHeightMap = nullptr; 
 	ID3D11ShaderResourceView* mpWaterHeightMapSRV = nullptr;
 
@@ -107,7 +95,5 @@ private:
 		float z;
 		float Pad1;
 	};
-
-	
 };
 
