@@ -16,10 +16,53 @@ using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
 
+
+namespace ImGui
+{
+	static auto vector_getter = [](void* vec, int idx, const char** out_text)
+	{
+		auto& vector = *static_cast<std::vector<std::string>*>(vec);
+		if (idx < 0 || idx >= static_cast<int>(vector.size())) { return false; }
+		*out_text = vector.at(idx).c_str();
+		return true;
+	};
+
+	bool Combo(const char* label, int* currIndex, std::vector<std::string>& values)
+	{
+		if (values.empty()) { return false; }
+		return Combo(label, currIndex, vector_getter,
+			static_cast<void*>(&values), values.size());
+	}
+
+	bool ListBox(const char* label, int* currIndex, std::vector<std::string>& values)
+	{
+		if (values.empty()) { return false; }
+		return ListBox(label, currIndex, vector_getter,
+			static_cast<void*>(&values), values.size());
+	}
+
+}
+
+
+
 Game::Game() noexcept(false) : terrain({5,5,2})
 {
     m_deviceResources = std::make_unique<DX::DeviceResources>();
     m_deviceResources->RegisterDeviceNotify(this);
+
+
+	std::string line;
+	std::ifstream infile("./maps/Saves.txt");
+	if (infile.is_open())
+	{
+		
+		while (getline(infile, line))
+		{
+			saves.push_back(line);
+		}
+		infile.close();
+	}
+
 }
 
 Game::~Game()
@@ -129,6 +172,8 @@ void Game::Update(DX::StepTimer const& timer)
 		if (RaycastWater)
 			raycastType = water;
 
+		
+
 		if(terrain.RayCast(pos, ray, PointDistance, 100, raycastType))
 		{
 			auto state = earth;
@@ -205,29 +250,87 @@ void Game::Render()
 
 	ImGui::Text( &fps[0]);
 	
-	//slider and text
-	bool changed = false;
+	if (FullTerrain)
+	{
+		static std::vector<char> arr3(' ');
+		ImGui::InputText("##SaveName", arr3.data(),30);
 
-	ImGui::Text("Point Distance");
-	changed |= ImGui::SliderFloat("", &PointDistance, 0.1f, 10.f);
+		std::string saveName = arr3.data();
 
-	ImGui::Text("Frequency");
-	changed |= ImGui::SliderFloat(" ", &Frequency, 0.1f, 20.f);
+		if (ImGui::Button("Save"))
+		{
+			terrain.SaveTerrain(PointDistance, GridSize, saveName);
+			
+			bool duplicate = false;
+			for (int i = 0; i < saves.size(); ++i)
+			{
+				if (saveName == saves[i])
+					duplicate = true;
+			}
+			if (!duplicate)
+			{
+				saves.push_back(saveName);
 
-	ImGui::Text("Surface Level");
-	changed |= ImGui::SliderFloat("  ", &surfaceLevel, 5.f, 30.f);
+				std::ofstream ofile("./maps/Saves.txt");
+				for (int i = 0; i < saves.size(); ++i)
+				{
+					ofile << saves[i] << std::endl;
+				}
+				ofile.close();
+			}
 
-	ImGui::Text("GridSize");
-	changed |= ImGui::SliderInt("   ", &GridSize, 5, 30);
 
-	ImGui::Text("Interpolate");
-	changed |= ImGui::Checkbox("    ", &interpolate);
-		
-	if(changed)
-		terrain.generateTerrain(PointDistance, Frequency, GridSize, interpolate, surfaceLevel);
+		}
 
-	/*if (ImGui::Button("Regenerate"))
-		terrain.generateTerrain(PointDistance, Frequency, GridSize, interpolate);*/
+		if (ImGui::Combo("saves", &selectedSave, saves))
+		{
+
+		}
+
+		if (ImGui::Button("Load"))
+			terrain.LoadTerrain(PointDistance,GridSize,saves[selectedSave]);
+
+		if (ImGui::Button("Reset Area"))
+			terrain.generateTerrain(PointDistance, Frequency, GridSize, interpolate, surfaceLevel);
+
+		if (ImGui::Button("Return"))
+		{
+			terrain.GenerateFullArea({ 5,5,2}, PointDistance, Frequency, GridSize, interpolate, surfaceLevel);
+			FullTerrain = false;
+		}
+
+
+	}
+	else
+	{
+		//slider and text
+		bool changed = false;
+
+		ImGui::Text("Point Distance");
+		changed |= ImGui::SliderFloat("", &PointDistance, 0.1f, 10.f);
+
+		ImGui::Text("Frequency");
+		changed |= ImGui::SliderFloat(" ", &Frequency, 0.1f, 20.f);
+
+		ImGui::Text("Surface Level");
+		changed |= ImGui::SliderFloat("  ", &surfaceLevel, 5.f, 30.f);
+
+		ImGui::Text("GridSize");
+		changed |= ImGui::SliderInt("   ", &GridSize, 5, 30);
+
+		ImGui::Text("Interpolate");
+		changed |= ImGui::Checkbox("    ", &interpolate);
+
+		if (changed)
+			terrain.generateTerrain(PointDistance, Frequency, GridSize, interpolate, surfaceLevel);
+
+		if (ImGui::Button("Generate Full Area"))
+		{
+			terrain.GenerateFullArea({ 10,5,10 }, PointDistance, Frequency, GridSize, interpolate, surfaceLevel);
+			FullTerrain = true;
+		}
+	}
+	
 
 	ImGui::Separator();
 

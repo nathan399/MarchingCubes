@@ -37,6 +37,6 @@ private:
 	float MoveSpeed = 50;
 	float RotSpeed = 2;
 	float NearClip = 0.01f;
-	float FarClip = 100.f;
+	float FarClip = 1000.f;
 };
 

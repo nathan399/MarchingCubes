@@ -73,22 +73,25 @@ float4 main(in PS_INPUT pIn) : SV_Target
 
 	waterNormal = normalize(waterNormal);  // Final normalization for above line
 
-	float3 LightColour = float3(0.33,0.33,0.33);
-	float3 normal = pIn.Normal;
-
 	float3 color = float3(0, 0, 0.1);
 
-	float3 normalToCamera = normalize(CameraPos - pIn.WorldPos);
+	if (pIn.Normal.y >= 0.5f)
+	{
 
-	float3 LightPos = float3(1, 1, 1);
+		float3 LightColour = float3(0.33, 0.33, 0.33);
+		float3 normal = pIn.Normal;
 
-	float3 vectorToLight = LightPos;//LightPos - pIn.WorldPos;
-	float3 normalToLight = normalize(vectorToLight);
-	float3 halfwayVector = normalize(normalToLight + normalToCamera);
-	float3 specularLight1 = LightColour * pow(max(dot(waterNormal, halfwayVector), 0), 256/*SpecularPower*/);
+		float3 normalToCamera = normalize(CameraPos - pIn.WorldPos);
 
+		float3 LightPos = float3(1, 1, 1);
 
-
-	return float4(color + specularLight1,0.2f);
+		float3 vectorToLight = LightPos;//LightPos - pIn.WorldPos;
+		float3 normalToLight = normalize(vectorToLight);
+		float3 halfwayVector = normalize(normalToLight + normalToCamera);
+		float3 specularLight1 = LightColour * pow(max(dot(waterNormal, halfwayVector), 0), 256/*SpecularPower*/);
+		return float4(color + specularLight1,0.2f);
+	}
+	return float4(color, 0.2f);
+	
 
 }

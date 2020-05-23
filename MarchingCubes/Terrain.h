@@ -26,6 +26,7 @@ public:
 
 	void setUp(ID3D11DeviceContext* context, DX::DeviceResources* deviceResources);
 	void generateTerrain(float pointDistance,float frequency,int GridSize,bool interpolate, float surfaceLevel);
+	void GenerateFullArea(ChunkSize chunksize,float pointDistance, float frequency, int GridSize, bool interpolate, float surfaceLevel);
 	void UpdateCubes();
 	void AffectMesh(Vector3 pos,bool direction, float radius, int type);
 	void Smooth(Vector3 pos, float radius, int type);
@@ -36,6 +37,8 @@ public:
 
 	bool RayCast(Vector3& Pos, Vector3 Direction, float RayRadius, int RayCastLoops, int type);
 	
+	void SaveTerrain(float pointDistance, int gridSize, std::string saveName);
+	void LoadTerrain(float& pointDistance, int& gridSize,std::string fileName);
 	
 
 private:
@@ -48,7 +51,11 @@ private:
 	ID3D11Buffer* mpCameraConstantBuffer = NULL;
 
 	ID3D11VertexShader* mpVertexShader = NULL;
+	ID3D11VertexShader* mpWaterVertexShader = NULL;
 	ID3D11PixelShader* mpPixelShader = NULL;
+	ID3D11PixelShader* mpWaterPixelShader = NULL;
+	ID3D11PixelShader* mpWaterHeightPixelShader = NULL;
+
 
 	ID3D11Resource* mpDiffuseMap = nullptr; // This object represents the memory used by the texture on the GPU
 	ID3D11ShaderResourceView* mpDiffuseMapSRV = nullptr; // This object is used to give shaders access to the texture above (SRV = shader resource view)

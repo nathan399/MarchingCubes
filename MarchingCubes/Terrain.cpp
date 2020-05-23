@@ -4,6 +4,7 @@
 Terrain::Terrain(ChunkSize size)
 {
 	Chunk = size;
+
 }
 
 void Terrain::setUp(ID3D11DeviceContext* context, DX::DeviceResources* deviceResources)
@@ -121,6 +122,24 @@ void Terrain::setUp(ID3D11DeviceContext* context, DX::DeviceResources* deviceRes
 		Cubes[i].CreateMesh(water);
 	}
 
+	ID3DBlob* VertexCode;
+
+	LoadVertexShader(device, L"simple_vs.hlsl", &mpVertexShader, &VertexCode);
+	LoadVertexShader(device, L"WaterVS.hlsl", &mpWaterVertexShader, &VertexCode);
+	LoadPixelShader(device, L"simple_ps.hlsl", &mpPixelShader);
+	LoadPixelShader(device, L"Water_ps.hlsl", &mpWaterPixelShader);
+	LoadPixelShader(device, L"WaterHeight_ps.hlsl", &mpWaterHeightPixelShader);
+
+	D3D11_INPUT_ELEMENT_DESC VertexDesc[] =
+	{
+		// Data Type,  Type Index,  Data format                      Slot  Offset    Other values can be ignored for now 
+		{ "Position",  0,           DXGI_FORMAT_R32G32B32_FLOAT,     0,    0,        D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "Normal",  0,           DXGI_FORMAT_R32G32B32_FLOAT,     0,    12,        D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+	int VertexDescCount = sizeof(VertexDesc) / sizeof(VertexDesc[0]); // This gives a count of rows in the array above
+
+	device->CreateInputLayout(VertexDesc, VertexDescCount, VertexCode->GetBufferPointer(), VertexCode->GetBufferSize(), &mpVertexLayout);
+
 }
 
 void Terrain::generateTerrain(float pointDistance,float frequency, int GridSize, bool interpolate, float surfaceLevel)
@@ -129,6 +148,44 @@ void Terrain::generateTerrain(float pointDistance,float frequency, int GridSize,
 	for (int i = 0; i < Cubes.size(); i++)
 	{
 		Cubes[i].generate(pointDistance, frequency, GridSize, interpolate,surfaceLevel);
+	}
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		Cubes[i].CreateMesh(earth);
+		Cubes[i].CreateMesh(water);
+	}
+}
+
+void Terrain::GenerateFullArea(ChunkSize chunksize ,float pointDistance, float frequency, int GridSize, bool interpolate, float surfaceLevel)
+{
+	Chunk = chunksize;
+	Cubes.clear();
+
+	//create cubes
+	for (int x = 0; x < Chunk.x; x++)
+	{
+		for (int y = 0; y < Chunk.y; y++)
+		{
+			for (int z = 0; z < Chunk.z; z++)
+			{
+				sEdges edge
+				{
+					x == Chunk.x - 1 ? true : false,
+					x == 0 ? true : false,
+					y == Chunk.y - 1 ? true : false,
+					y == 0 ? true : false,
+					z == Chunk.z - 1 ? true : false,
+					z == 0 ? true : false
+				};
+
+				Cubes.push_back(MarchingCubes(mpContext, { (float)x,(float)y, (float)z }, edge , pointDistance, frequency, GridSize, interpolate, surfaceLevel));
+			}
+		}
+	}
+
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		Cubes[i].neighbours = GetNeightbours(i);
 	}
 	for (int i = 0; i < Cubes.size(); i++)
 	{
@@ -218,9 +275,12 @@ void Terrain::render(Matrix viewProj, Matrix viewProjInv,bool Wireframe, float f
 	{
 		Cubes[i].RenderEarth(Wireframe ? States->Wireframe() : States->CullCounterClockwise()
 			, States->Opaque()
-			, States->DepthDefault());
+			, States->DepthDefault()
+			, mpVertexShader
+			, mpPixelShader
+			, mpVertexLayout);
 	}
-
+	
 	mpContext->PSSetShaderResources(2, 1, &mpDiffuseMapSRV2);
 
 	//water height rendering
@@ -237,7 +297,9 @@ void Terrain::render(Matrix viewProj, Matrix viewProjInv,bool Wireframe, float f
 		Cubes[i].RenderWater(States->CullCounterClockwise()
 			, States->AlphaBlend()
 			, States->DepthDefault()
-			, true);
+			, mpWaterVertexShader
+		, mpWaterHeightPixelShader
+		, mpVertexLayout);
 	}
 
 	//reset render target
@@ -252,7 +314,10 @@ void Terrain::render(Matrix viewProj, Matrix viewProjInv,bool Wireframe, float f
 	{
 		Cubes[i].RenderWater(Wireframe ? States->Wireframe() : States->CullCounterClockwise()
 			, States->AlphaBlend()
-			, States->DepthDefault());
+			, States->DepthDefault()
+			, mpWaterVertexShader
+			, mpWaterPixelShader
+			, mpVertexLayout);
 	}
 
 
@@ -278,6 +343,61 @@ bool Terrain::RayCast(Vector3& Pos, Vector3 Direction, float RayRadius, int RayC
 		}
 	}
 	return false;
+}
+
+void Terrain::SaveTerrain(float pointDistance, int gridSize, std::string saveName)
+{
+	std::ofstream myfile;
+	
+	myfile.open("./Maps/" + saveName + ".txt");
+	myfile << Chunk.x << std::endl;
+	myfile << Chunk.y << std::endl;
+	myfile << Chunk.z << std::endl;
+	myfile << pointDistance << std::endl;
+	myfile << gridSize << std::endl;
+
+	for (int i = 0; i < Cubes.size(); i++)
+	{
+		Cubes[i].WriteChunk(myfile);
+	}
+
+	myfile.close();
+}
+void Terrain::LoadTerrain(float& pointDistance, int& gridSize, std::string fileName)
+{
+	std::string line;
+	std::ifstream infile("./Maps/" + fileName +".txt");
+
+	if (infile.is_open())
+	{
+		getline(infile, line);
+		Chunk.x = std::stoi(line);
+		getline(infile, line);
+		Chunk.y = std::stoi(line);
+		getline(infile, line);
+		Chunk.z = std::stoi(line);
+		getline(infile, line);
+		pointDistance = std::stof(line);
+		getline(infile, line);
+		gridSize = std::stoi(line);
+		
+		GenerateFullArea(Chunk, pointDistance, 1, gridSize,true,20);
+			
+		for (int i = 0; i < Cubes.size(); i++)
+		{
+			Cubes[i].ReadChunk(infile);
+		}
+
+		for (int i = 0; i < Cubes.size(); i++)
+		{
+			
+
+			Cubes[i].CreateMesh(0);
+			Cubes[i].CreateMesh(1);
+		}
+
+		infile.close();
+	}
 }
 
 Neighbours Terrain::GetNeightbours(int cubeNum)

@@ -5,6 +5,9 @@
 #include <vector>
 #include <CommonStates.h>
 #include <SimpleMath.h>
+#include <iostream>
+#include <fstream>
+#include <string>
 #include "Shader.h"
 
 using DirectX::SimpleMath::Matrix;
@@ -57,8 +60,22 @@ struct sEdges
 class MarchingCubes
 {
 public:
-	MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, sEdges edges, float pointDistance = 1, float frequency = 1, int GridSize = 10, bool interpolate = true);
-	~MarchingCubes() {};
+	MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, sEdges edges, float pointDistance = 1, float frequency = 1, int GridSize = 10, bool interpolate = true, float surfaceLevel = 20);
+	~MarchingCubes() 
+	{
+	/*	if (mpVertexLayout)	   mpVertexLayout->Release();
+		if (mVertexBuffer[0])  mVertexBuffer[0]->Release();
+		if (mVertexBuffer[1])  mVertexBuffer[1]->Release();
+		if (mpConstantBuffer)    mpConstantBuffer->Release();
+
+		if (mpVertexShader)    mpVertexShader->Release();
+		if (mpWaterVertexShader)    mpWaterVertexShader->Release();
+		if (mpPixelShader)    mpPixelShader->Release();
+		if (mpWaterPixelShader)    mpWaterPixelShader->Release();
+		if (mpWaterHeightPixelShader)    mpWaterHeightPixelShader->Release();*/
+	};	 
+	
+	
 	std::vector<SVertices> getVertices() { return vertices; }
 	void generate(float pointDistance, float frequency, int GridSize, bool interpolate, float surfaceLevel);
 	void CreateMesh(int type);
@@ -69,24 +86,20 @@ public:
 	bool CubeToSphere(Vector3 sPos, float radius);
 	bool GetSurfacePoint(Vector3& pos, float Radius, int type);
 	void SetBuffer(int type);
-	void RenderEarth(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState);
-	void RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState , bool HeightRender = false);
+	void RenderEarth(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState , ID3D11VertexShader* mpVertexShader, ID3D11PixelShader* mpPixelShader, ID3D11InputLayout* mpVertexLayout);
+	void RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState , ID3D11VertexShader* mpVertexShader, ID3D11PixelShader* mpPixelShader, ID3D11InputLayout* mpVertexLayout);
 	float GetValueAt(float x, float y, float z, int type) {return Points[x][y][z].value[type];}
 	
+	void WriteChunk(std::ofstream& file);
+	void ReadChunk(std::ifstream& file);
 
 	Neighbours neighbours;
 	bool MeshChanged = false;
 
 private:
-	ID3D11InputLayout* mpVertexLayout = NULL;
+	//ID3D11InputLayout* mpVertexLayout = NULL;
 	ID3D11Buffer* mVertexBuffer[2] = { NULL,NULL };
 	ID3D11Buffer* mpConstantBuffer = NULL;
-
-	ID3D11VertexShader* mpVertexShader = NULL;
-	ID3D11VertexShader* mpWaterVertexShader = NULL;
-	ID3D11PixelShader* mpPixelShader = NULL;
-	ID3D11PixelShader* mpWaterPixelShader = NULL;
-	ID3D11PixelShader* mpWaterHeightPixelShader = NULL;
 
 	ID3D11DeviceContext* mpContext = NULL;
 
@@ -101,6 +114,8 @@ private:
 	vector<SVertices> vertices;
 	vector<SVertices> WaterVertices;
 	float SurfaceLevel = 0;
+	float AdjustAmount = 0.04;
+	float SmoothDiff = 0.05;
 	int gridSize = 100;
 	bool Interpolate = true;
 

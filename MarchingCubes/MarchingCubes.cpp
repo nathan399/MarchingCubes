@@ -259,7 +259,7 @@ int triTable[256][16] =
 {0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1} };
 
-MarchingCubes::MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, sEdges edges, float pointDistance, float frequency, int GridSize, bool interpolate) : Pos(pos)
+MarchingCubes::MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, sEdges edges, float pointDistance, float frequency, int GridSize, bool interpolate, float surfaceLevel) : Pos(pos)
 {
 	mpContext = context;
 	
@@ -283,24 +283,7 @@ MarchingCubes::MarchingCubes(ID3D11DeviceContext* context,Vector3 pos, sEdges ed
 
 	hr = device->CreateBuffer(&constantBufferDesc, nullptr, &mpConstantBuffer);
 
-	ID3DBlob* VertexCode;
-
-	LoadVertexShader(device, L"simple_vs.hlsl", &mpVertexShader, &VertexCode);
-	LoadVertexShader(device, L"WaterVS.hlsl", &mpWaterVertexShader, &VertexCode);
-	LoadPixelShader(device, L"simple_ps.hlsl", &mpPixelShader);
-	LoadPixelShader(device, L"Water_ps.hlsl", &mpWaterPixelShader);
-	LoadPixelShader(device, L"WaterHeight_ps.hlsl", &mpWaterHeightPixelShader); 
-
-	D3D11_INPUT_ELEMENT_DESC VertexDesc[] =
-	{
-		// Data Type,  Type Index,  Data format                      Slot  Offset    Other values can be ignored for now 
-		{ "Position",  0,           DXGI_FORMAT_R32G32B32_FLOAT,     0,    0,        D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "Normal",  0,           DXGI_FORMAT_R32G32B32_FLOAT,     0,    12,        D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
-	int VertexDescCount = sizeof(VertexDesc) / sizeof(VertexDesc[0]); // This gives a count of rows in the array above
-
-	device->CreateInputLayout(VertexDesc, VertexDescCount, VertexCode->GetBufferPointer(), VertexCode->GetBufferSize(), &mpVertexLayout);
-	generate(pointDistance, frequency, GridSize, interpolate,20);
+	generate(pointDistance, frequency, GridSize, interpolate, surfaceLevel);
 
 }
 
@@ -356,7 +339,7 @@ void MarchingCubes::generate(float pointDistance,float frequency,int GridSize, b
 					if (surface)
 					{
 						
-						noise = (noise + 2)  - (y + convertedPos.y) / surfaceLevel;
+						noise = (noise + 1)  - (y + convertedPos.y) / surfaceLevel;
 					}
 					
 					Points[x][y][z].value[earth] = noise;
@@ -477,61 +460,67 @@ void MarchingCubes::UpdateWater()
 					//x values
 					if (Points[x][y][z].value[water] > SurfaceLevel + 0.01 && !FlownDown)
 					{
-						if (x < gridSize - 1)
+						if (!(x == gridSize - 2 && EdgeState.xMax))
 						{
-							if (Points[x + 1][y][z].value[water] < 0.2 && Points[x + 1][y][z].value[earth] < SurfaceLevel)
+							if (x < gridSize - 1)
 							{
-								//Points[x][y][z].value[water] -= 0.01;
-								Points[x + 1][y][z].value[water] += 0.01;
-								if (x == gridSize - 2 && !EdgeState.xMax)
+								if (Points[x + 1][y][z].value[water] < 0.2 && Points[x + 1][y][z].value[earth] < SurfaceLevel)
 								{
-									neighbours.Left->Points[0][y][z].value[water] = Points[x + 1][y][z].value[water];
-									neighbours.Left->MeshChanged = true;
+									//Points[x][y][z].value[water] -= 0.01;
+									Points[x + 1][y][z].value[water] += 0.01;
+									if (x == gridSize - 2 && !EdgeState.xMax)
+									{
+										neighbours.Left->Points[0][y][z].value[water] = Points[x + 1][y][z].value[water];
+										neighbours.Left->MeshChanged = true;
+									}
+									change = true;
 								}
-								change = true;
-							}
 
-						}
-						else
-						{
-							if (neighbours.Left->Points[1][y][z].value[water] < 0.2 && neighbours.Left->Points[1][y][z].value[earth] < SurfaceLevel)
-							{
-								//Points[x][y][z].value[water] -= 0.01;
-								neighbours.Left->Points[0][y][z].value[water] = Points[x][y][z].value[water];
-								neighbours.Left->Points[1][y][z].value[water] += 0.01;
-								neighbours.Left->MeshChanged = true;
-								change = true;
 							}
-						}
+							else
+							{
+								if (neighbours.Left->Points[1][y][z].value[water] < 0.2 && neighbours.Left->Points[1][y][z].value[earth] < SurfaceLevel)
+								{
+									//Points[x][y][z].value[water] -= 0.01;
+									neighbours.Left->Points[0][y][z].value[water] = Points[x][y][z].value[water];
+									neighbours.Left->Points[1][y][z].value[water] += 0.01;
+									neighbours.Left->MeshChanged = true;
+									change = true;
+								}
+							}
+						}						
 					}
 
 					if (Points[x][y][z].value[water] > SurfaceLevel && !FlownDown)
 					{
-						if (x > 0)
+						if (!(x == 1 && EdgeState.xMin))
 						{
-							if (Points[x - 1][y][z].value[water] < 0.2 && Points[x - 1][y][z].value[earth] < SurfaceLevel)
+							if (x > 0)
 							{
-								//Points[x][y][z].value[water] -= 0.01;
-								Points[x - 1][y][z].value[water] += 0.01;
-								if (x == 0)
+								if (Points[x - 1][y][z].value[water] < 0.2 && Points[x - 1][y][z].value[earth] < SurfaceLevel)
 								{
-									neighbours.Right->Points[gridSize - 1][y][z].value[water] = Points[x - 1][y][z].value[water];
-									neighbours.Right->MeshChanged = true;
+									//Points[x][y][z].value[water] -= 0.01;
+									Points[x - 1][y][z].value[water] += 0.01;
+									if (x == 0)
+									{
+										neighbours.Right->Points[gridSize - 1][y][z].value[water] = Points[x - 1][y][z].value[water];
+										neighbours.Right->MeshChanged = true;
+									}
+									change = true;
 								}
-								change = true;
 							}
-						}
-						else
-						{
-							if (neighbours.Right->Points[gridSize - 2][y][z].value[water] < 0.2 && neighbours.Right->Points[gridSize - 2][y][z].value[earth] < SurfaceLevel)
+							else
 							{
-								//Points[x][y][z].value[water] -= 0.01;
-								neighbours.Right->Points[gridSize - 1][y][z].value[water] = Points[x][y][z].value[water];
-								neighbours.Right->Points[gridSize - 2][y][z].value[water] += 0.01;
-								neighbours.Right->MeshChanged = true;
-								change = true;
-							}
+								if (neighbours.Right->Points[gridSize - 2][y][z].value[water] < 0.2 && neighbours.Right->Points[gridSize - 2][y][z].value[earth] < SurfaceLevel)
+								{
+									//Points[x][y][z].value[water] -= 0.01;
+									neighbours.Right->Points[gridSize - 1][y][z].value[water] = Points[x][y][z].value[water];
+									neighbours.Right->Points[gridSize - 2][y][z].value[water] += 0.01;
+									neighbours.Right->MeshChanged = true;
+									change = true;
+								}
 
+							}
 						}
 					}
 					//end of x
@@ -539,30 +528,33 @@ void MarchingCubes::UpdateWater()
 					//z values
 					if (Points[x][y][z].value[water] > SurfaceLevel + 0.01 && !FlownDown)
 					{
-						if (z < gridSize - 1)
+						if (!(z == gridSize - 2 && EdgeState.zMax))
 						{
-							if (Points[x][y][z + 1].value[water] < 0.2 && Points[x][y][z + 1].value[earth] < SurfaceLevel)
+							if (z < gridSize - 1)
 							{
-								//Points[x][y][z].value[water] -= 0.01;
-								Points[x][y][z + 1].value[water] += 0.01;
-								if (z == gridSize - 2 && !EdgeState.zMax)
+								if (Points[x][y][z + 1].value[water] < 0.2 && Points[x][y][z + 1].value[earth] < SurfaceLevel)
 								{
-									neighbours.Back->Points[x][y][0].value[water] = Points[x][y][z + 1].value[water];
-									neighbours.Back->MeshChanged = true;
+									//Points[x][y][z].value[water] -= 0.01;
+									Points[x][y][z + 1].value[water] += 0.01;
+									if (z == gridSize - 2 && !EdgeState.zMax)
+									{
+										neighbours.Back->Points[x][y][0].value[water] = Points[x][y][z + 1].value[water];
+										neighbours.Back->MeshChanged = true;
+									}
+									change = true;
 								}
-								change = true;
-							}
 
-						}
-						else
-						{
-							if (neighbours.Back->Points[x][y][1].value[water] < 0.2 && neighbours.Back->Points[x][y][1].value[earth] < SurfaceLevel)
+							}
+							else
 							{
-								//Points[x][y][z].value[water] -= 0.01;
-								neighbours.Back->Points[x][y][0].value[water] = Points[x][y][z].value[water];
-								neighbours.Back->Points[x][y][1].value[water] += 0.01;
-								neighbours.Back->MeshChanged = true;
-								change = true;
+								if (neighbours.Back->Points[x][y][1].value[water] < 0.2 && neighbours.Back->Points[x][y][1].value[earth] < SurfaceLevel)
+								{
+									//Points[x][y][z].value[water] -= 0.01;
+									neighbours.Back->Points[x][y][0].value[water] = Points[x][y][z].value[water];
+									neighbours.Back->Points[x][y][1].value[water] += 0.01;
+									neighbours.Back->MeshChanged = true;
+									change = true;
+								}
 							}
 						}
 					}
@@ -570,31 +562,34 @@ void MarchingCubes::UpdateWater()
 
 					if (Points[x][y][z].value[water] > SurfaceLevel && !FlownDown)
 					{
-						if (z > 0)
+						if (!(z == 1 && EdgeState.zMin))
 						{
-							if (Points[x][y][z - 1].value[water] < 0.2 && Points[x][y][z - 1].value[earth] < SurfaceLevel)
+							if (z > 0)
 							{
-								//Points[x][y][z].value[water] -= 0.01;
-								Points[x][y][z - 1].value[water] += 0.01;
-								if (z == 0)
+								if (Points[x][y][z - 1].value[water] < 0.2 && Points[x][y][z - 1].value[earth] < SurfaceLevel)
 								{
-									neighbours.Forward->Points[x][y][gridSize - 1].value[water] = Points[x][y][z -1].value[water];
-									neighbours.Forward->MeshChanged = true;
+									//Points[x][y][z].value[water] -= 0.01;
+									Points[x][y][z - 1].value[water] += 0.01;
+									if (z == 0)
+									{
+										neighbours.Forward->Points[x][y][gridSize - 1].value[water] = Points[x][y][z - 1].value[water];
+										neighbours.Forward->MeshChanged = true;
+									}
+									change = true;
 								}
-								change = true;
 							}
-						}
-						else
-						{
-							if (neighbours.Forward->Points[x][y][gridSize - 2].value[water] < 0.2 && neighbours.Forward->Points[x][y][gridSize - 2].value[earth] < SurfaceLevel)
+							else
 							{
-								//Points[x][y][z].value[water] -= 0.01;
-								neighbours.Forward->Points[x][y][gridSize - 1].value[water] = Points[x][y][z].value[water];
-								neighbours.Forward->Points[x][y][gridSize - 2].value[water] += 0.01;
-								neighbours.Forward->MeshChanged = true;
-								change = true;
-							}
+								if (neighbours.Forward->Points[x][y][gridSize - 2].value[water] < 0.2 && neighbours.Forward->Points[x][y][gridSize - 2].value[earth] < SurfaceLevel)
+								{
+									//Points[x][y][z].value[water] -= 0.01;
+									neighbours.Forward->Points[x][y][gridSize - 1].value[water] = Points[x][y][z].value[water];
+									neighbours.Forward->Points[x][y][gridSize - 2].value[water] += 0.01;
+									neighbours.Forward->MeshChanged = true;
+									change = true;
+								}
 
+							}
 						}
 					}
 					//end of z values										
@@ -635,12 +630,12 @@ void MarchingCubes::AffectPoints(Vector3 pos, int direction, float radius, int t
 						
 					if (length < radius)
 					{
-						Points[x][y][z].value[type] += (0.04 * direction) / length;
+						Points[x][y][z].value[type] += (AdjustAmount * direction) / length;
 
 						if (Points[x][y][z].value[type] > MaxValue)
 							Points[x][y][z].value[type] = MaxValue;
 
-						if (Points[x][y][z].value[type] < MinValue)
+						else if (Points[x][y][z].value[type] < MinValue)
 							Points[x][y][z].value[type] = MinValue;
 
 					}
@@ -714,12 +709,12 @@ void MarchingCubes::Smooth(Vector3 pos, float radius,int type)
 							
 
 						average /= totals;
-						if (abs(Points[x][y][z].value[type] - average) > 0.02)
+						if (abs(Points[x][y][z].value[type] - average) > SmoothDiff)
 						{
 							if (Points[x][y][z].value[type] < average)
-								Points[x][y][z].value[type] += 0.04;
+								Points[x][y][z].value[type] += AdjustAmount;
 							else
-								Points[x][y][z].value[type] -= 0.04;
+								Points[x][y][z].value[type] -= AdjustAmount;
 						}
 						
 
@@ -754,14 +749,14 @@ void MarchingCubes::Flatten(Vector3 pos, float radius, int type)
 					{
 						if (Points[x][y][z].pos.y <= pos.y)
 						{
-							Points[x][y][z].value[type] += (0.04) / length;
+							Points[x][y][z].value[type] += (AdjustAmount) / length;
 
 							if (Points[x][y][z].value[type] > MaxValue)
 								Points[x][y][z].value[type] = MaxValue;
 						}
 						else
 						{
-							Points[x][y][z].value[type] -= (0.04) / length;
+							Points[x][y][z].value[type] -= (AdjustAmount) / length;
 
 							if (Points[x][y][z].value[type] < MinValue)
 								Points[x][y][z].value[type] = MinValue;
@@ -865,7 +860,7 @@ void MarchingCubes::SetBuffer(int type)
 
 }
 
-void MarchingCubes::RenderEarth(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState)
+void MarchingCubes::RenderEarth(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState, ID3D11VertexShader* mpVertexShader, ID3D11PixelShader* mpPixelShader, ID3D11InputLayout* mpVertexLayout)
 {
 	if (vertices.size() > 0)
 	{
@@ -895,7 +890,7 @@ void MarchingCubes::RenderEarth(ID3D11RasterizerState* state, ID3D11BlendState* 
 		mpContext->Draw(vertices.size(), 0);
 	}
 }
-void MarchingCubes::RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState, bool HeightRender)
+void MarchingCubes::RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* BlendState, ID3D11DepthStencilState* DepthState, ID3D11VertexShader* mpVertexShader, ID3D11PixelShader* mpPixelShader, ID3D11InputLayout* mpVertexLayout)
 {
 	//draw water
 	if (WaterVertices.size() > 0)
@@ -917,11 +912,8 @@ void MarchingCubes::RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* 
 
 
 		// 3) Select which shaders to use when rendering
-		mpContext->VSSetShader(mpWaterVertexShader, nullptr, 0);
-		if(HeightRender)
-			mpContext->PSSetShader(mpWaterHeightPixelShader, nullptr, 0);
-		else
-			mpContext->PSSetShader(mpWaterPixelShader, nullptr, 0);
+		mpContext->VSSetShader(mpVertexShader, nullptr, 0);
+		mpContext->PSSetShader(mpPixelShader, nullptr, 0);
 		
 		mpContext->OMSetBlendState(BlendState, DirectX::Colors::Black, 0xFFFFFFFF);
 		mpContext->OMSetDepthStencilState(DepthState, 0);
@@ -930,6 +922,40 @@ void MarchingCubes::RenderWater(ID3D11RasterizerState* state, ID3D11BlendState* 
 		mpContext->Draw(WaterVertices.size(), 0);
 	}
 }
+
+void MarchingCubes::WriteChunk(std::ofstream& file)
+{
+	for (int x = 0; x < gridSize; x++)
+	{
+		for (int y = 0; y < gridSize; y++)
+		{
+			for (int z = 0; z < gridSize; z++)
+			{
+				file << Points[x][y][z].value[0] << std::endl;
+				file << Points[x][y][z].value[1] << std::endl;
+			}
+		}
+	}
+}
+
+void MarchingCubes::ReadChunk(std::ifstream& file)
+{
+	for (int x = 0; x < gridSize; x++)
+	{
+		for (int y = 0; y < gridSize; y++)
+		{
+			for (int z = 0; z < gridSize; z++)
+			{
+				std::string line;
+				getline(file, line);
+				Points[x][y][z].value[0] = std::stof(line);
+				getline(file, line);
+				Points[x][y][z].value[1] = std::stof(line);
+			}
+		}
+	}
+}
+
 
 void MarchingCubes::CalculateCubesVerticies(PointData edge[8], int type)
 {

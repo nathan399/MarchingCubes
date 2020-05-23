@@ -78,6 +78,11 @@ private:
 	bool RaycastWater = false;
 	float ToolRadius = 10.f;
 
+	bool FullTerrain = false;
+	int selectedSave = 0;
+
+	vector<std::string> saves;
+
 	// Game Objects
 	Terrain terrain;
 	Camera camera;

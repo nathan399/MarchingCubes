@@ -46,7 +46,6 @@ float4 main(in PS_INPUT pIn) : SV_Target
 	float lerpV = 0;
 	
 	lerpV = pIn.Normal.y * 2 - 1;
-
 	lerpV = clamp(lerpV, 0, 1);
 
 	float3  diffuseMapColour = diffuseMapColour1 * (1 - lerpV) + diffuseMapColour2 * lerpV;
